@@ -157,8 +157,10 @@ rm(years_num)
 # collapse lists, and combine into one
 output <- bind_rows(
   bind_rows(dfs_pdf_out),
-  bind_rows(dfs_excel_out)
-)
+  bind_rows(dfs_excel_out)) %>% 
+  relocate(fy_year, .before = fy_total) %>% 
+  arrange(local_gov, tax_type, vendor_num, fy_year)
+
 
 # confirm all rows are present
 sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
