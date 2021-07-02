@@ -1,2 +1,3 @@
 # Income and Use taxes
-Downloaded from: https://www2.illinois.gov/rev/localgovernments/disbursements/incomeanduse/Pages/Fiscal-Year-Archive.aspx
+These files are downloaded directly from IDOR
+https://www2.illinois.gov/rev/localgovernments/disbursements/incomeanduse/Pages/Fiscal-Year-Archive.aspx
