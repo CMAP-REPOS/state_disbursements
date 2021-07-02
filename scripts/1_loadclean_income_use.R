@@ -8,33 +8,29 @@
 #   https://cimentadaj.github.io/blog/2018-05-25-installing-rjava-on-windows-10/installing-rjava-on-windows-10/
 
 
-# load packages ---------------------------
+# startup ----------------------------------
 
-library("tidyverse")
-library("here")
-library("readxl")
-library("writexl")
+# packages
+library(tidyverse)
+library(here)
+library(readxl)
+library(writexl)
+library(pdftools)
 
-# needed for pre-2012 imports only
-library("rJava")
-library("tabulizer")
+# helper functions
+source(here("scripts", "0_helpers.R"))
 
+# location of input data
+setwd(here("data_raw", "idor_income_use"))
 
-
-# Identify files to import ----------------
-
-setwd(here("raw_data", "idor_income_use"))
-
-files_pdf <- list.files(pattern = ".pdf$")
-files_excel <- list.files(pattern = ".xls$|.xlsx$")
-
-dfs_out <- list()
 
 # process excel files -----------------------
+files_excel <- list.files(pattern = ".xls$|.xlsx$")
 
 # import files
 dfs_excel <- map(files_excel, read_excel, skip = 5) %>% 
   set_names(files_excel)
+
 
 # Function to process excel files
 # (Treats 2012 and 2013 specially)
@@ -58,36 +54,8 @@ clean_excel <- function(df, fy){
       filter(!is.na(fy_total))                  # remove dummy 2nd rows
   }
   
-  # confirm totals and remove total row
-  total_pos <- str_which(df$local_gov, "TOTAL")
-  if (length(total_pos) > 2) {
-    message(paste0("Table ", fy, ": Multiple total rows? Check!"))
-  } else if (length(total_pos) == 0) {
-    message(paste0("Table ", fy, ": No total row found. Check!"))
-  } else {
-    # first part of message: where is total row located?
-    msg1 <- paste("Total row (@", total_pos, "of", nrow(df), "rows")
-    
-    # extract total row and remove it (and any footnotes) from df
-    total_row <- df[total_pos,]
-    df <- slice(df, 1:total_pos-1)
-    
-    # compare totals
-    df_sum <- sum(df$fy_total)
-    totalrow_sum <- total_row$fy_total
-    matches <- all.equal(df_sum, totalrow_sum)
-    msg2 <- if_else(matches,
-                   "sum OK",
-                   paste("total row and sum mismatch. Check!",
-                         paste("   df sum:   ", df_sum),
-                         paste("   total row:", totalrow_sum),
-                         sep = "\n"
-                         )
-    )
-    
-    # return message
-    message(paste("FY", fy, "|", msg1, "|", msg2))
-  }
+  # check and remove totals with helper fn
+  df <- total_check_extract(df, "local_gov", "fy_total", paste0("FY", fy))
   
   df <- df %>% 
     mutate_at(vars(tax_type), as.factor) %>%   # convert tax_type into factor
@@ -113,107 +81,111 @@ dfs_excel_out <- map2(dfs_excel, years_num, clean_excel) %>%
 rm(years_num, years_char)
 
 
-
-
 # import PDF files -----------------------
-# ...it takes a LONG time to extract the pdfs
+files_pdf <- list.files(pattern = ".pdf$")
 
-dfs_pdf <- map(files_pdf, extract_tables) %>% 
-  set_names(files_pdf)
+dfs_pdf <- map(files_pdf, ~(str_split(pdf_text(.), "\n")))
 
-clean_fy11_earlier <- function(list, fy_label){
+# function for interpreting pdfs
+clean_pdf <- function(raw, fy){
   
-}
-
-
-extract_tables("income_use_fy06.pdf")
-
-income_use_fy06 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy06.pdf"))
-income_use_fy07 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy07.pdf"))
-income_use_fy08 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy08.pdf"))
-income_use_fy09 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy09.pdf"))
-income_use_fy10 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy10.pdf"))
-income_use_fy11 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy11.pdf"))
-
-
-# Clean raw FY06 - FY11 files to make scrapped pdf files usable ---------------------------
-
-# create function for looping income list cleaning
-
-clean_income_list <- function(income_list, year_fy) {
- 
-   require(tidyverse)
-  
-  data <- tibble()
-  
-  for (i in 1:length(income_list)) {
+  # remove headers and footers, and drop last page (Which just contains totals)
+  processed <- list()
+  for (i in seq.int(length(raw))) {
+    # identify the row that contains the column headers, and remove rows up through it.
+    header_row <- str_which(raw[[i]], "Local Government\\s*Tax Vendor")
+    processed[[i]] <- raw[[i]][-(seq.int(header_row))] 
     
-    cat(i,"... ", sep="") # print out number for each element in list cleaned
-    
-    raw <- income_list %>%
-      pluck(i) %>% # select first element
-      {suppressMessages(as_tibble(., .name_repair = "unique"))} %>% # suppress message "New names:* `` -> ...1" that
-      # arises when colnames generated for matrix columns w/o names
-      select(local_gov = 1, tax_type = 2, vendor_num = 3, fy_total = ncol(.)) %>% # rename columns
-      slice(-1:-2) %>% # remove first two rows that are poorly formatted headers
-      mutate_all(list(~na_if(., ""))) %>% # convert all blanks "" to NA
-      fill(fy_total, .direction = "up") %>% # insert the fy_total value from the row below up to deal with bad formatting of pdf
-      filter(!is.na(local_gov)) %>%  # remove the rows with NA for local_gov
-      filter(local_gov != "Local Government") %>% # filter out extraneous rows with repeating header
-      mutate_at(vars(tax_type), as.factor) %>% # convert tax_type into factor
-      mutate_at(vars(fy_total), list(~gsub(",","", .))) %>% # remove commas from column to allow conversion of fy_total to numeric
-      mutate_at(vars(fy_total), as.numeric) # convert fy_total to numeric
-    
-    data <- rbind(data, raw)
+    # identify the first blank row, and remove it and all rows after it.
+    footer_row <- str_which(processed[[i]], "^$")[1]
+    processed[[i]] <- processed[[i]][-seq(footer_row, length(processed[[i]]))]
   }
-  data <- mutate(data, fy_year = year_fy) # create a column with year from function arguement
   
-  # Check if sum of local gov fy totals matches total in pdf
+  table <- processed %>% 
+    unlist() %>%     # collapse to single vector of rows
+    as_tibble() %>%  # convert this character vector to a table with 1 col ("value")
+    mutate(value = trimws(value)) %>%
+    # split into three columns based on fixed value of date columns
+    extract(value,   
+            into = c("lg_tax_vendor", "date", "values"),
+            regex = "(.*(?=JUL - DEC)|.*(?=JAN - JUN))(JUL - DEC|JAN - JUN)(.*)") %>% 
+    # separate local government
+    separate(lg_tax_vendor,
+             into = c("local_gov", "tax_vendor"),
+             sep = "\\s{2,}",
+             extra = "merge",
+             fill = "right") %>% 
+    # separate tax_type and vendor_num
+    mutate(tax_vendor = trimws(tax_vendor)) %>% 
+    separate(tax_vendor,
+             into = c("tax_type", "vendor_num"),
+             sep = "\\s",
+             fill = "right") %>% 
+    # separate number fields
+    mutate(values = trimws(values)) %>% 
+    separate(values,
+             into = c("mo1", "mo2", "mo3", "mo4", "mo5", "mo6", "fy_total"),
+             sep = "\\s{2,}",
+             fill = "right") %>% 
+    # convert currencies to numbers
+    mutate_at(c("mo1", "mo2", "mo3", "mo4", "mo5", "mo6", "fy_total"), parse_number) %>% 
+    # create dummy tax_type for total row
+    mutate(tax_type = ifelse(str_detect(local_gov, "TOTAL"), "TOTAL", tax_type)) %>% 
+    # convert any "" to NA
+    mutate_all(list(~na_if(., ""))) %>%
+    # fill down descriptive column values
+    fill(local_gov, tax_type, vendor_num) %>% 
+    # remove dummy 2nd rows
+    filter(!is.na(fy_total)) %>% 
+    # simplify and add date
+    select(local_gov, tax_type, vendor_num, fy_total) %>% 
+    mutate(fy_year = fy) 
   
-  grand_total_data <- data[[nrow(data), "fy_total"]] # extract the fy total  disbursements
-  row_total_data <- sum(head(data$fy_total, -1)) # sum up total column, excluting the last element which is total sum
-  check_sums <- grand_total_data == row_total_data # check two numbers the same
+  # remove totals row, checking to make sure it sums correctly
+  table <- total_check_extract(table, "local_gov", "fy_total", paste0("FY", fy))
   
-  if (check_sums) message("Extracted FY Total equal to summed FY total") # Print message coniditonal if numbers are equal or not
-  else message("Error: Extracted FY Total does not equal summed FY total")
-  
-  return(data)
+  return(table)
 }
 
-# run fuction to clean income use FY06
-income_use_fy06_clean <-  clean_income_list(income_use_fy06, 2006)
+# create temporary vectors
+years_num <- str_extract(files_pdf, "[[:digit:]]+") %>% 
+  str_c("20", .) %>% 
+  as.numeric()
+years_char <- str_extract(files_pdf, "[[:digit:]]+") %>% 
+  str_c("fy", .)
 
-# run fuction to clean income use FY07
-income_use_fy07_clean <-  clean_income_list(income_use_fy07, 2007)
+# map function across all available excel workbooks
+dfs_pdf_out <- map2(dfs_pdf, years_num, clean_pdf) %>% 
+  set_names(years_char)
 
-# run fuction to clean income use FY08
-income_use_fy08_clean <-  clean_income_list(income_use_fy08, 2008)
-
-# run fuction to clean income use FY09
-income_use_fy09_clean <-  clean_income_list(income_use_fy09, 2009)
-
-# run fuction to clean income use FY10
-income_use_fy10_clean <-  clean_income_list(income_use_fy10, 2010)
-
-# run fuction to clean income use FY11
-income_use_fy11_clean <-  clean_income_list(income_use_fy11, 2011)
+# remove temporary argument vectors
+rm(years_num, years_char)
 
 
-# Clean raw FY12 - FY19 files to make scrapped pdf files usable ---------------------------
+# combine and export  ---------------------------
+
+# collapse lists, and combine into one
+output <- bind_rows(
+  bind_rows(dfs_pdf_out),
+  bind_rows(dfs_excel_out)
+)
+
+# confirm all rows are present
+sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
 
 
-
-
-
-# Create list of cleaned FY datasets  ---------------------------
-list_inc_clean <- setNames(lapply(ls(pattern="[0-9]_clean"), function(x) get(x)), ls(pattern = "[0-9]_clean"))
-
-# bind tibbles from all FYs into one
-df_inc_clean <- bind_rows(list_inc_clean) %>%
-  mutate_at(vars(tax_type), as.factor) %>% 
-  slice(1:(n()-4)) %>%  # remove last 4 rows with total and extraneous column
-  filter(local_gov != "TOTAL")
 # export as excel workbook and RDS
-write_xlsx(df_inc_clean, path = here("data", "processed", "income_use_fy06_19_clean.xlsx"))
-saveRDS(df_inc_clean, file = here("data", "processed", "income_use_fy06_19_clean.rds"))
+setwd(here("data_processed"))
+write_xlsx(output, path = "idor_income_use.xls")
+saveRDS(output, file = "idor_income_use.rds")
+
+
+# check against Timi
+## NEED TO FIGURE OUT WHAT'S GOING ON WITH DUPLICATES
+## SEE FOR EXAMPLE FY2012, WILMINGTON
+check <-readRDS("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\income_use_fy06_19_clean.RDS")
+full_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
+  rowwise() %>% 
+  mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
+  View()
 
