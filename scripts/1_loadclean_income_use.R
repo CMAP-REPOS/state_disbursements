@@ -65,20 +65,17 @@ clean_excel <- function(df, fy){
   return(df)
 }
 
-# create temporary vectors
+# create temporary vector
 years_num <- str_extract(files_excel, "[[:digit:]]+") %>% 
   str_c("20", .) %>% 
   as.numeric()
-years_char <- str_extract(files_excel, "[[:digit:]]+") %>% 
-  str_c("fy", .)
 
 # map function across all available excel workbooks
-dfs_excel_out <- map2(dfs_excel, years_num, clean_excel) %>% 
-  set_names(years_char)
+dfs_excel_out <- map2(dfs_excel, years_num, clean_excel)
 
 
 # remove temporary argument vectors
-rm(years_num, years_char)
+rm(years_num)
 
 
 # import PDF files -----------------------
@@ -147,19 +144,16 @@ clean_pdf <- function(raw, fy){
   return(table)
 }
 
-# create temporary vectors
+# create temporary vector
 years_num <- str_extract(files_pdf, "[[:digit:]]+") %>% 
   str_c("20", .) %>% 
   as.numeric()
-years_char <- str_extract(files_pdf, "[[:digit:]]+") %>% 
-  str_c("fy", .)
 
 # map function across all available excel workbooks
-dfs_pdf_out <- map2(dfs_pdf, years_num, clean_pdf) %>% 
-  set_names(years_char)
+dfs_pdf_out <- map2(dfs_pdf, years_num, clean_pdf)
 
-# remove temporary argument vectors
-rm(years_num, years_char)
+# remove temporary argument vector
+rm(years_num)
 
 
 # combine and export  ---------------------------
@@ -180,11 +174,12 @@ write_xlsx(output, path = "idor_income_use.xls")
 saveRDS(output, file = "idor_income_use.rds")
 
 
-# check against Timi
-## NEED TO FIGURE OUT WHAT'S GOING ON WITH DUPLICATES
-## SEE FOR EXAMPLE FY2012, WILMINGTON
+# check against Timi's work ---------------------
+#
+# - New script seems to handle situations where one local gov has multiple vendor nums
+#   better. See, for example, FY2012 Wilmington and Windsor
 check <-readRDS("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\income_use_fy06_19_clean.RDS")
-full_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
+left_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
   rowwise() %>% 
   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
   View()
