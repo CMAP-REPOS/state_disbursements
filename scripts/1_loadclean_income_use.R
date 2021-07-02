@@ -168,7 +168,7 @@ sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(outp
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))
-write_xlsx(output, path = "idor_income_use.xls")
+write_xlsx(output, path = "idor_income_use.xlsx")
 saveRDS(output, file = "idor_income_use.rds")
 
 
