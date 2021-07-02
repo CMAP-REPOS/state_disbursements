@@ -76,19 +76,20 @@ rm(years_num)
 # import PDF files -----------------------
 files_pdf <- list.files(pattern = ".pdf$")
 
+# import all (not actually dfs, yet - a list of lists)
 dfs_pdf <- map(files_pdf, ~(str_split(pdf_text(.), "\n")))
 
 # function for interpreting pdfs
 clean_pdf <- function(raw, fy){
   
-  # remove headers and footers, and drop last page (Which just contains totals)
+  # work through each page to remove headers and footers
   processed <- list()
   for (i in seq.int(length(raw))) {
     # identify the row that contains the column headers, and remove rows up through it.
     header_row <- str_which(raw[[i]], "Local Government\\s*Tax Vendor")
     processed[[i]] <- raw[[i]][-(seq.int(header_row))] 
     
-    # identify the first blank row, and remove it and all rows after it.
+    # identify the first blank row, and remove it and all rows after.
     footer_row <- str_which(processed[[i]], "^$")[1]
     processed[[i]] <- processed[[i]][-seq(footer_row, length(processed[[i]]))]
   }
@@ -96,7 +97,7 @@ clean_pdf <- function(raw, fy){
   table <- processed %>% 
     unlist() %>%     # collapse to single vector of rows
     as_tibble() %>%  # convert this character vector to a table with 1 col ("value")
-    mutate(value = trimws(value)) %>%
+    mutate(value = trimws(value)) %>% # drop leading and trailing white space
     # split into three columns based on fixed value of date columns
     extract(value,   
             into = c("lg_tax_vendor", "date", "values"),
