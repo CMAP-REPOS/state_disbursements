@@ -1,11 +1,6 @@
 # Read in IDOR income and use data 
-# Original Author: Timi Koyejo
-# Start Date: 11/20/2019
-# Modified by: Matt Stern, July 2021
-
-# Note: IDOR files before 2012 are PDFs, imported here via tabulizer and rJava,
-#   which require Java be installed. For more info see:
-#   https://cimentadaj.github.io/blog/2018-05-25-installing-rjava-on-windows-10/installing-rjava-on-windows-10/
+# Author: Matt Stern, July 2021
+# Building on work by Timi Koyejo, Nov 2019
 
 
 # startup ----------------------------------
@@ -17,7 +12,7 @@ library(readxl)
 library(writexl)
 library(pdftools)
 
-# helper functions
+# source helper functions (`total_check_extract()` needed here)
 source(here("scripts", "0_helpers.R"))
 
 # location of input data
