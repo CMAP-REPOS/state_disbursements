@@ -11,12 +11,14 @@
 # load packages ---------------------------
 
 library("tidyverse")
-library("readxl")
 library("here")
+library("readxl")
+library("writexl")
 
+# needed for pre-2012 imports only
 library("rJava")
 library("tabulizer")
-library("writexl")
+
 
 
 # Identify files to import ----------------
@@ -28,70 +30,103 @@ files_excel <- list.files(pattern = ".xls$|.xlsx$")
 
 dfs_out <- list()
 
-# import excel files -----------------------
+# process excel files -----------------------
+
+# import files
 dfs_excel <- map(files_excel, read_excel, skip = 5) %>% 
   set_names(files_excel)
 
-
-# FY12 and FY13 use the same two-row-per-entry format. This function cleans.
-clean_fy12_13 <- function(df, fy_label){
-  
-  clean <- df %>% 
-    select(local_gov = 1, tax_type = 2, 
-         vendor_num = 3, fy_total = ncol(.)) %>%   # rename columns
-    mutate_all(list(~na_if(., ""))) %>%            # convert any "" to NA
-    fill(fy_total, .direction = "up") %>%          # grab total value from row below
-    filter(!is.na(local_gov)) %>%                  # remove dummy 2nd rows
-    mutate_at(vars(tax_type), as.factor) %>%       # convert tax_type into factor
-    mutate_at(vars(fy_total), as.numeric) %>%      # convert total to numeric
-    mutate(fy_year = fy_label)                     # add column with fy year
-  
-  return(clean)
-}
-
-# use function to clean fiscal years 2012 and 2013
-dfs_out$fy12 <- clean_fy12_13(dfs_excel$income_use_fy12.xls, 2012)
-dfs_out$fy13 <- clean_fy12_13(dfs_excel$income_use_fy13.xls, 2013)
-
-
-# FY14 and forward use single-row-per-entry format. This function cleans. 
-# 
-# ***IMPORTANT NOTE*** 
+# Function to process excel files
+# (Treats 2012 and 2013 specially)
+#
+# *** IMPORTANT NOTE ***
 # Future year excel files should be checked to make sure the format has not evolved
-
-clean_fy14_forward <- function(df, fy_label) {
+clean_excel <- function(df, fy){
   
-  clean <- df %>%
+  # select and rename necessary cols
+  df <- df %>% 
     select(local_gov = 1, tax_type = 2, 
-           vendor_num = 3, fy_total = ncol(.)) %>% # select and rename necessary cols
-    mutate_at(vars(tax_type), as.factor) %>%       # convert tax_type into factor
-    mutate_at(vars(fy_total), as.numeric) %>%      # confirm total is numeric
-    mutate(fy_year = fy_label)                     # add column with fy year
+           vendor_num = 3, fy_total = ncol(.))
   
-  return(clean)
+  # FY12 and FY13 use the same two-row-per-entry format that must be reformatted
+  if(fy %in% c(2012, 2013)){
+    df <- df %>% 
+      mutate_all(list(~na_if(., ""))) %>%       # convert any "" to NA
+      mutate(                                   # create dummy tax_type for total row
+        tax_type = ifelse(str_detect(local_gov, "TOTAL"), "TOTAL", tax_type)) %>% 
+      fill(local_gov, tax_type, vendor_num) %>% # fill down descriptive column values
+      filter(!is.na(fy_total))                  # remove dummy 2nd rows
+  }
+  
+  # confirm totals and remove total row
+  total_pos <- str_which(df$local_gov, "TOTAL")
+  if (length(total_pos) > 2) {
+    message(paste0("Table ", fy, ": Multiple total rows? Check!"))
+  } else if (length(total_pos) == 0) {
+    message(paste0("Table ", fy, ": No total row found. Check!"))
+  } else {
+    # first part of message: where is total row located?
+    msg1 <- paste("Total row (@", total_pos, "of", nrow(df), "rows")
+    
+    # extract total row and remove it (and any footnotes) from df
+    total_row <- df[total_pos,]
+    df <- slice(df, 1:total_pos-1)
+    
+    # compare totals
+    df_sum <- sum(df$fy_total)
+    totalrow_sum <- total_row$fy_total
+    matches <- all.equal(df_sum, totalrow_sum)
+    msg2 <- if_else(matches,
+                   "sum OK",
+                   paste("total row and sum mismatch. Check!",
+                         paste("   df sum:   ", df_sum),
+                         paste("   total row:", totalrow_sum),
+                         sep = "\n"
+                         )
+    )
+    
+    # return message
+    message(paste("FY", fy, "|", msg1, "|", msg2))
+  }
+  
+  df <- df %>% 
+    mutate_at(vars(tax_type), as.factor) %>%   # convert tax_type into factor
+    mutate(fy_year = fy)                       # add column with fy year
+  
+
+  return(df)
 }
 
-##  use function to to clean fiscal years 2014 and forward
-# create temporary argument vectors 
-# (these should automatically expand themselves to include future years if available) 
-filenames <- setdiff(files_excel, c("income_use_fy12.xls", "income_use_fy13.xls"))
-years_num <- str_extract(filenames, "[[:digit:]]+") %>% 
+# create temporary vectors
+years_num <- str_extract(files_excel, "[[:digit:]]+") %>% 
   str_c("20", .) %>% 
   as.numeric()
-years_char <- str_extract(filenames, "[[:digit:]]+") %>% 
+years_char <- str_extract(files_excel, "[[:digit:]]+") %>% 
   str_c("fy", .)
 
-# map over argument vectors to import files and add to 'dfs_out' list
-dfs_out <- map2(dfs_excel[filenames], years_num, clean_fy14_forward) %>% 
-  set_names(years_char) %>% 
-  append(dfs_out, .)
+# map function across all available excel workbooks
+dfs_excel_out <- map2(dfs_excel, years_num, clean_excel) %>% 
+  set_names(years_char)
+
 
 # remove temporary argument vectors
-rm(filenames, years_num, years_char)
+rm(years_num, years_char)
 
 
-# load IDOR income and use tax data  ---------------------------
-# Warning it takes a LONG time to extract the pdfs
+
+
+# import PDF files -----------------------
+# ...it takes a LONG time to extract the pdfs
+
+dfs_pdf <- map(files_pdf, extract_tables) %>% 
+  set_names(files_pdf)
+
+clean_fy11_earlier <- function(list, fy_label){
+  
+}
+
+
+extract_tables("income_use_fy06.pdf")
 
 income_use_fy06 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy06.pdf"))
 income_use_fy07 <- extract_tables(file = here("data", "raw", "idor", "income_use", "income_use_fy07.pdf"))
@@ -168,64 +203,7 @@ income_use_fy11_clean <-  clean_income_list(income_use_fy11, 2011)
 
 
 
-# create function to clean excel files
-clean_income_use_excel <- function(income_excel, year_fy) {
-  
-  require(tidyverse)
-  
-  raw <- tibble()
-  
-  raw <- income_excel %>%
-    as_tibble() %>%
-    rename_all(tolower) %>%  # rename all columns to lowercase
-    select(-july:-june) %>%
-    rename(local_gov = `local government`, tax_type = tax,
-           vendor_num = `vendor #`, fy_total = `fy total`)
-  
-  raw <- mutate(raw, fy_year = year_fy) # create a column with year from function arguement
-  
-  return(raw)
-}
 
-
-# clean FY12 manually due to irregular excel format
-income_use_fy12_clean <- income_use_fy12 %>%
-  select(local_gov = 1, tax_type = 2, vendor_num = 3, fy_total = ncol(.)) %>% # rename columns
-  mutate_all(list(~na_if(., ""))) %>% # convert all blanks "" to NA
-  fill(fy_total, .direction = "up") %>% # insert the total value from the row below up to deal with bad formatting of pdf
-  filter(!is.na(local_gov)) %>%  # remove the rows with NA for local_gov
-  mutate_at(vars(tax_type), as.factor) %>% # convert tax_type into factor
-  mutate_at(vars(fy_total), as.numeric) %>% # convert total to numeric
-  mutate(fy_year = 2012) # add column with fy year
-
-# clean FY13 manually due to irregular excel format
-income_use_fy13_clean <- income_use_fy13 %>%
-  select(local_gov = 1, tax_type = 2, vendor_num = 3, fy_total = ncol(.)) %>% # rename columns
-  mutate_all(list(~na_if(., ""))) %>% # convert all blanks "" to NA
-  fill(fy_total, .direction = "up") %>% # insert the total value from the row below up to deal with bad formatting of pdf
-  filter(!is.na(local_gov)) %>%  # remove the rows with NA for local_gov
-  mutate_at(vars(tax_type), as.factor) %>% # convert tax_type into factor
-  mutate_at(vars(fy_total), as.numeric) %>% # convert total to numeric
-  mutate(fy_year = 2013) # add column with fy year
-
-
-# run function to clean FY14
-income_use_fy14_clean <- clean_income_use_excel(income_use_fy14, 2014)
-
-# run function to clean FY15
-income_use_fy15_clean <- clean_income_use_excel(income_use_fy15, 2015)
-
-# run function to clean FY16
-income_use_fy16_clean <- clean_income_use_excel(income_use_fy16, 2016)
-
-# run function to clean FY17
-income_use_fy17_clean <- clean_income_use_excel(income_use_fy17, 2017)
-
-# run function to clean FY18
-income_use_fy18_clean <- clean_income_use_excel(income_use_fy18, 2018)
-
-# run function to clean FY19
-income_use_fy19_clean <- clean_income_use_excel(income_use_fy19, 2019)
 
 # Create list of cleaned FY datasets  ---------------------------
 list_inc_clean <- setNames(lapply(ls(pattern="[0-9]_clean"), function(x) get(x)), ls(pattern = "[0-9]_clean"))
