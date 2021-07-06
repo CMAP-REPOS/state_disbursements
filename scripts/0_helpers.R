@@ -67,8 +67,8 @@ total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"
 rm_header_footer <- function(raw_list, header_search, footer_search){
   processed <- list()
   for (i in seq.int(length(raw_list))) {
-    # identify the row that contains the column headers, and remove rows up through it.
-    header_row <- str_which(raw_list[[i]], header_search)
+    # identify the last row that potentially contains column headers, and remove rows up through it.
+    header_row <- last(str_which(raw_list[[i]], header_search))
     processed[[i]] <- raw_list[[i]][-(seq.int(header_row))] 
     
     # identify the first blank row, and remove it and all rows after.
