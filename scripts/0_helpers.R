@@ -6,11 +6,12 @@
 #' @param col1 the column that has the word "TOTAL" in it, demarcating the total row
 #' @param col2 the column with the total to check. Must be numeric.
 #' @param msg_label the value to append on the front end of the confirmation message
+#' @param search the label to search for in `col1`
 #' 
-total_check_extract <- function(df, col1, col2, msg_label = ""){
+total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"){
 
   # identify total row in col1
-  total_pos <- str_which(df[[col1]], "TOTAL")
+  total_pos <- str_which(df[[col1]], search)
   
   if (length(total_pos) > 2) {
     warning(paste0(msglabel, ": Multiple total rows? Check! (NULL returned)"))
@@ -48,4 +49,33 @@ total_check_extract <- function(df, col1, col2, msg_label = ""){
   return(df)
 }  
 
+
+
+#' function to strip headers and footers from an imported PDF list
+#'
+#' `str_split(pdf_text(.), "\n")` produces a list of character vectors. Each
+#' list item is a page, and each vector item is a line on the page. This
+#' function goes page by page (list item by list item) and removes header and
+#' footer character vectors, returning only the data.
+#'
+#' @param raw_list the output of `str_split(pdf_text(.), "\n")`.
+#' @param header_search text to search for that demarcates the last row to
+#'   remove at the top of the page
+#' @param footer_search text to search for that demarcates the first row to
+#'   remove at the bottom of the page
+#'   
+rm_header_footer <- function(raw_list, header_search, footer_search){
+  processed <- list()
+  for (i in seq.int(length(raw_list))) {
+    # identify the row that contains the column headers, and remove rows up through it.
+    header_row <- str_which(raw_list[[i]], header_search)
+    processed[[i]] <- raw_list[[i]][-(seq.int(header_row))] 
+    
+    # identify the first blank row, and remove it and all rows after.
+    footer_row <- str_which(processed[[i]], footer_search)[1]
+    processed[[i]] <- processed[[i]][-seq(footer_row, length(processed[[i]]))]
+  }
+  
+  return(processed)
+}
 

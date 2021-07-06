@@ -1,7 +1,9 @@
-# Read in IDOR income and use data 
+# Read in IDOR sales tax disbursement data 
 # Author: Matt Stern, July 2021
 # Building on work by Timi Koyejo, Nov 2019
 
+# NOTE: This is *very* similar to 1_loadclean_income_use.R. Differences are 
+#   all small specification changes and tweaks.
 
 # startup ----------------------------------
 
@@ -16,7 +18,7 @@ library(pdftools)
 source(here("scripts", "0_helpers.R"))
 
 # location of input data
-setwd(here("data_raw", "idor_income_use"))
+setwd(here("data_raw", "idor_sales"))
 
 
 # process excel files -----------------------
@@ -26,6 +28,8 @@ files_excel <- list.files(pattern = ".xls$|.xlsx$")
 dfs_excel <- map(files_excel, read_excel, skip = 5) %>% 
   set_names(files_excel)
 
+# Manually insert TOTAL into last row of local gov column for FY16
+dfs_excel$idor_sales_fy16.xls[nrow(dfs_excel$idor_sales_fy16.xls), 1] <- "TOTAL"
 
 # Function to process excel files
 # (Treats 2012 and 2013 specially)
@@ -34,10 +38,11 @@ dfs_excel <- map(files_excel, read_excel, skip = 5) %>%
 # Future year excel files should be checked to make sure the format has not evolved
 clean_excel <- function(df, fy){
   
-  # select and rename necessary cols
+  # select, rename, and convert necessary cols
   df <- df %>% 
     select(local_gov = 1, tax_type = 2, 
-           vendor_num = 3, fy_total = ncol(.))
+           vendor_num = 3, fy_total = ncol(.)) %>% 
+    mutate(vendor_num = as.character(vendor_num))
   
   # FY12 and FY13 use the same two-row-per-entry format that must be reformatted
   if(fy %in% c(2012, 2013)){
@@ -83,7 +88,7 @@ dfs_pdf <- map(files_pdf, ~(str_split(pdf_text(.), "\n")))
 clean_pdf <- function(list, fy){
   
   # work through each page to remove headers and footers
-  processed <- rm_header_footer(list, "Local Government\\s*Tax Vendor", "^$")
+  processed <- rm_header_footer(list, "Local Government\\s*Tax\\s*Vendor", "^$")
   
   table <- processed %>% 
     unlist() %>%     # collapse to single vector of rows
@@ -103,13 +108,13 @@ clean_pdf <- function(list, fy){
     mutate(tax_vendor = trimws(tax_vendor)) %>% 
     separate(tax_vendor,
              into = c("tax_type", "vendor_num"),
-             sep = "\\s",
+             sep = "\\s{1,}",
              fill = "right") %>% 
     # separate number fields
     mutate(values = trimws(values)) %>% 
     separate(values,
              into = c("mo1", "mo2", "mo3", "mo4", "mo5", "mo6", "fy_total"),
-             sep = "\\s{2,}",
+             sep = "\\s{1,}",
              fill = "right") %>% 
     # convert currencies to numbers
     mutate_at(c("mo1", "mo2", "mo3", "mo4", "mo5", "mo6", "fy_total"), parse_number) %>% 
@@ -159,22 +164,21 @@ sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(outp
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))
-write_xlsx(output, path = "idor_income_use.xlsx")
-saveRDS(output, file = "idor_income_use.rds")
+write_xlsx(output, path = "idor_sales.xlsx")
+saveRDS(output, file = "idor_sales.rds")
 
 
 # check against Timi's work ---------------------
 #
 # New script seems to handle situations where one local gov has multiple vendor nums
 #   better. See, for example, FY2012 Wilmington and Windsor
-check <-readRDS("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\income_use_fy06_19_clean.RDS")
+check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\sales_disbursement_fy06_19_clean.xlsx")
 left_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
   rowwise() %>% 
   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
   View()
 
-# Only major difference here is 2012 and 2013. 
-# New script is accurate to total rows in IDOR xls files
+# Only major difference here is 2013. New script is accurate to total row in IDOR xls file
 full_join(
   output %>% 
     group_by(fy_year) %>% 
@@ -186,6 +190,5 @@ full_join(
   suffix = c(".m", ".t")
 ) %>% 
   mutate(dif = fy_total.m - fy_total.t)
-
 
 
