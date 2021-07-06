@@ -11,7 +11,6 @@
 library(tidyverse)
 library(here)
 library(readxl)
-library(writexl)
 library(pdftools)
 
 # source helper functions
@@ -164,7 +163,7 @@ sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(outp
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))
-write_xlsx(output, path = "idor_sales.xlsx")
+write_csv(output, "idor_sales.csv")
 saveRDS(output, file = "idor_sales.rds")
 
 

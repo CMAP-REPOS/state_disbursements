@@ -8,7 +8,6 @@
 # packages
 library(tidyverse)
 library(here)
-library(writexl)
 library(readxl)
 library(pdftools)
 library(scales)
@@ -116,7 +115,7 @@ sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))
-write_xlsx(output, path = "idot_mft.xlsx")
+write_csv(output, "idot_mft.csv")
 saveRDS(output, file = "idot_mft.rds")
 
 
