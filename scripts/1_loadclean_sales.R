@@ -1,6 +1,6 @@
 # Read in IDOR sales tax disbursement data 
-# Author: Matt Stern, July 2021
-# Building on work by Timi Koyejo, Nov 2019
+# Stern/Koyejo
+# July 2021
 
 # NOTE: This is *very* similar to 1_loadclean_income_use.R. Differences are 
 #   all small specification changes and tweaks.

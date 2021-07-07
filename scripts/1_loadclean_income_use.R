@@ -1,6 +1,6 @@
 # Read in IDOR income and use data 
-# Author: Matt Stern, July 2021
-# Building on work by Timi Koyejo, Nov 2019
+# Stern/Koyejo
+# July 2021
 
 
 # startup ----------------------------------
