@@ -1,0 +1,99 @@
+Category,Catname,Subcategory,Rollup1,Rollup2
+201t,Property Tax    ,,Property Tax    ,Property Tax    
+202t,Local Sales Tax    ,,Local Sales Tax    ,Local Sales Tax    
+203a,Utility Tax,Electric Utilities    ,Utility Tax,Utility Tax
+203b,Utility Tax,Water Utilities    ,Utility Tax,Utility Tax
+203c,Utility Tax,Communications Utilities    ,Utility Tax,Utility Tax
+203d,Utility Tax,Other Utilities Tax     ,Utility Tax,Utility Tax
+203t,Utility Tax,Utilities Tax    ,Utility Tax,Utility Tax
+204t,Other Taxes ,,Other Revenues,Other Revenues
+205t,State Gaming Tax(es)    ,,State Gaming Taxes,State Gaming Taxes
+211t,State Income Tax    ,,State Income Tax    ,State Income Tax    
+212t,State Sales Tax    ,,State Sales Tax    ,State Sales Tax    
+213t,State Motor Fuel Tax    ,,State Motor Fuel Tax    ,State Motor Fuel Tax    
+214t,State Replacement Tax    ,,State PP Replacement Tax    ,State PP Replacement Tax    
+215a,Other state sources and grants,General Support    ,Other federal and state sources,Other state sources & grants
+215b,Other state sources and grants,Public Welfare    ,Other federal and state sources,Other state sources & grants
+215c,Other state sources and grants,Health and/or Hospitals    ,Other federal and state sources,Other state sources & grants
+215d,Other state sources and grants,Streets and Highways    ,Other federal and state sources,Other state sources & grants
+215e,Other state sources and grants,Culture and Recreation    ,Other federal and state sources,Other state sources & grants
+215f,Other state sources and grants,Housing and Community Dev    ,Other federal and state sources,Other state sources & grants
+215g,Other state sources and grants,Water Supply System    ,Other federal and state sources,Other state sources & grants
+215h,Other state sources and grants,Electric/Gas Power System    ,Other federal and state sources,Other state sources & grants
+215i,Other state sources and grants,Mass Transit    ,Other federal and state sources,Other state sources & grants
+215j,Other state sources and grants,Other     ,Other federal and state sources,Other state sources & grants
+215t,Other state sources and grants,Other State Sources     ,Other federal and state sources,Other state sources & grants
+225a,Federal grants and revenues,General Support    ,Other federal and state sources,Federal grants & revenues
+225b,Federal grants and revenues,Public Welfare    ,Other federal and state sources,Federal grants & revenues
+225c,Federal grants and revenues,Health and/or Hospitals    ,Other federal and state sources,Federal grants & revenues
+225d,Federal grants and revenues,Streets and Highways    ,Other federal and state sources,Federal grants & revenues
+225e,Federal grants and revenues,Culture and Recreation    ,Other federal and state sources,Federal grants & revenues
+225f,Federal grants and revenues,Housing and Community Dev    ,Other federal and state sources,Federal grants & revenues
+225g,Federal grants and revenues,Water Supply System    ,Other federal and state sources,Federal grants & revenues
+225h,Federal grants and revenues,Electric/Gas Power System    ,Other federal and state sources,Federal grants & revenues
+225i,Federal grants and revenues,Mass Transit    ,Other federal and state sources,Federal grants & revenues
+225j,Federal grants and revenues,Other     ,Other federal and state sources,Federal grants & revenues
+225t,Federal grants and revenues,Federal Sources    ,Other federal and state sources,Federal grants & revenues
+226t,Other Intergovernmental     ,,Other Revenues,Other Intergovernmental     
+231t,Licenses and Permits    ,,Other Revenues,Other Revenues
+233t,Fines and Forfeitures    ,,Other Revenues,Other Revenues
+234a,Charges for services and utilities,Water Utilities    ,Charges for utilities,"Charges for water, gas, & electric utilities"
+234b,Charges for services and utilities,Gas Utilities    ,Charges for utilities,"Charges for water, gas, & electric utilities"
+234c,Charges for services and utilities,Electric Utilities    ,Charges for utilities,"Charges for water, gas, & electric utilities"
+234d,Charges for services and utilities,Transit Utilities    ,Charges for utilities,Charges for other services and utilities
+234e,Charges for services and utilities,Sewer Utilities    ,Charges for utilities,Charges for sewer
+234f,Charges for services and utilities,Refuse and Disposal Charges    ,Charges for services,Charges for other services and utilities
+234g,Charges for services and utilities,Parking    ,Charges for services,Charges for other services and utilities
+234h,Charges for services and utilities,Housing    ,Charges for services,Charges for other services and utilities
+234i,Charges for services and utilities,Highway or Bridge Tolls    ,Charges for services,Charges for other services and utilities
+234j,Charges for services and utilities,Culture and Recreation    ,Charges for services,Charges for other services and utilities
+234k,Charges for services and utilities,Other     ,Charges for services,Charges for other services and utilities
+234t,Charges for services and utilities,Charges for Services    ,Charges for services,Charges for other services and utilities
+235t,Interest    ,,Other Revenues,Other Revenues
+236t,Miscellaneous   ,,Other Revenues,Other Revenues
+240t,Total Receipts and Revenue,,Total Receipts and Revenue,Total Receipts and Revenue
+251a,General Government,Financial Administration    ,General Government,General Government
+251b,General Government,General Administrative Buildings    ,General Government,General Government
+251c,General Government,Central Administration    ,General Government,General Government
+251d,General Government,Other     ,General Government,General Government
+251t,General Government,General Government    ,General Government,General Government
+252a,Public Safety,Police    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+252b,Public Safety,Fire    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+252c,Public Safety,Regulation - Building Inspection    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+252d,Public Safety,Other     ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+252t,Public Safety,Public Safety    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+253t,Corrections    ,Corrections    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+254t,Judiciary and Legal    ,Judiciary and Legal    ,"Public Safety, Corrections, Judiciary, and Legal","Public Safety, Corrections, Judiciary, and Legal"
+255a,Transportation and Public Works,Streets and Highways    ,Transportation and Public Works Operations,Transportation and Public Works Operations
+255b,Transportation and Public Works,Airports    ,Transportation and Public Works Operations,Transportation and Public Works Operations
+255c,Transportation and Public Works,Parking Meters    ,Transportation and Public Works Operations,Transportation and Public Works Operations
+255d,Transportation and Public Works,Parking Facilities    ,Transportation and Public Works Operations,Transportation and Public Works Operations
+255e,Transportation and Public Works,Other     ,Transportation and Public Works Operations,Transportation and Public Works Operations
+255t,Transportation and Public Works,Transportation and Public Works    ,Transportation and Public Works Operations,Transportation and Public Works Operations
+256a,Social Services,Welfare    ,Social Services and Housing,Social Services and Housing
+256b,Social Services,Health (Other than hospitals)    ,Social Services and Housing,Social Services and Housing
+256c,Social Services,Hospital Operations    ,Social Services and Housing,Social Services and Housing
+256d,Social Services,Cemeteries    ,Social Services and Housing,Social Services and Housing
+256e,Social Services,Other     ,Social Services and Housing,Social Services and Housing
+256t,Social Services,Social Services    ,Social Services and Housing,Social Services and Housing
+257a,Culture and Recreation,Library    ,Culture and Recreation,Culture and Recreation
+257b,Culture and Recreation,Parks    ,Culture and Recreation,Culture and Recreation
+257c,Culture and Recreation,Other     ,Culture and Recreation,Culture and Recreation
+257t,Culture and Recreation,Culture and Recreation    ,Culture and Recreation,Culture and Recreation
+258t,Housing    ,Housing    ,Social Services and Housing,Social Services and Housing
+259a,Debt,Interest    ,Debt,Debt
+259b,Debt,Principal    ,Debt,Debt
+259t,Debt,Debt    ,Debt,Debt
+260t,Other Expenditures     ,Other Expenditures     ,Other Expenditures     ,Other Expenditures     
+270t,Total Expenditures/Expense ,Total Expenditures/Expense ,Total Expenditures/Expense ,Total Expenditures/Expense 
+271a,Public Utilities,Water    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+271b,Public Utilities,Electric    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+271c,Public Utilities,Transit    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+271d,Public Utilities,Other     ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+271t,Public Utilities,Public Utility Company    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+272t,Depreciation    ,Depreciation    ,Other Expenditures     ,Other Expenditures     
+275a,Sewage and waste management,Sewage    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+275b,Sewage and waste management,Solid Waste Management    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+275c,Sewage and waste management,Other     ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+275t,Sewage and waste management,Environment    ,"Public Utilities, Sewage, and Waste Management Services","Public Utilities, Sewage, and Waste Management Services"
+280t,Capital Outlay    ,Capital Outlay    ,Capital Outlay    ,Capital Outlay    
