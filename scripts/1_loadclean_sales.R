@@ -8,10 +8,10 @@
 # startup ----------------------------------
 
 # packages
-library(tidyverse)
-library(here)
-library(readxl)
-library(pdftools)
+require(tidyverse)
+require(here)
+require(readxl)
+require(pdftools)
 
 # source helper functions
 source(here("scripts", "0_helpers.R"))
@@ -158,7 +158,7 @@ output <- bind_rows(
 
 
 # confirm all rows are present
-sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
+stopifnot(sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output))
 
 
 # export as excel workbook and RDS
@@ -167,27 +167,27 @@ write_csv(output, "idor_sales.csv")
 saveRDS(output, file = "idor_sales.rds")
 
 
-# check against Timi's work ---------------------
-#
-# New script seems to handle situations where one local gov has multiple vendor nums
-#   better. See, for example, FY2012 Wilmington and Windsor
-check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\sales_disbursement_fy06_19_clean.xlsx")
-left_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
-  rowwise() %>% 
-  mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
-  View()
-
-# Only major difference here is 2013. New script is accurate to total row in IDOR xls file
-full_join(
-  output %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  check %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  by = "fy_year",
-  suffix = c(".m", ".t")
-) %>% 
-  mutate(dif = fy_total.m - fy_total.t)
-
+# # check against Timi's work ---------------------
+# #
+# # New script seems to handle situations where one local gov has multiple vendor nums
+# #   better. See, for example, FY2012 Wilmington and Windsor
+# check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\sales_disbursement_fy06_19_clean.xlsx")
+# left_join(output, check, by = c("local_gov", "tax_type", "vendor_num", "fy_year")) %>% 
+#   rowwise() %>% 
+#   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
+#   View()
+# 
+# # Only major difference here is 2013. New script is accurate to total row in IDOR xls file
+# full_join(
+#   output %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   check %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   by = "fy_year",
+#   suffix = c(".m", ".t")
+# ) %>% 
+#   mutate(dif = fy_total.m - fy_total.t)
+# 
 

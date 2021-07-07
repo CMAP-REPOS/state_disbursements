@@ -7,9 +7,9 @@
 # startup ----------------------------------
 
 # packages
-library(tidyverse)
-library(here)
-library(readxl)
+require(tidyverse)
+require(here)
+require(readxl)
 
 # source helper functions
 source(here("scripts", "0_helpers.R"))
@@ -111,7 +111,7 @@ output <- bind_rows(dfs_out) %>%
                                     TRUE ~ "Other" ))
 
 # confirm all rows are present
-sum(map_int(dfs_out, nrow)) == nrow(output)
+stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
 
 
 # export as excel workbook and RDS
@@ -121,26 +121,26 @@ saveRDS(output, file = "idor_pprt.rds")
 
 
 
-# check against Timi's work ---------------------
-
-check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\pprt_fy07_19_clean.xlsx")
-
-# Only difference here is 2019, which is minor. New script is accurate to total row in IDOR xls file
-full_join(
-  output %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  check %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  by = "fy_year",
-  suffix = c(".m", ".t")
-) %>% 
-  mutate(dif = fy_total.m - fy_total.t)
-
-# this all looks pretty good
-left_join(output, check, by = c("local_gov" = "district_name", "district_num", "vendor_num", "fy_year")) %>% 
-  rowwise() %>% 
-  mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
-  View()
+# # check against Timi's work ---------------------
+# 
+# check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\pprt_fy07_19_clean.xlsx")
+# 
+# # Only difference here is 2019, which is minor. New script is accurate to total row in IDOR xls file
+# full_join(
+#   output %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   check %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   by = "fy_year",
+#   suffix = c(".m", ".t")
+# ) %>% 
+#   mutate(dif = fy_total.m - fy_total.t)
+# 
+# # this all looks pretty good
+# left_join(output, check, by = c("local_gov" = "district_name", "district_num", "vendor_num", "fy_year")) %>% 
+#   rowwise() %>% 
+#   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
+#   View()
 

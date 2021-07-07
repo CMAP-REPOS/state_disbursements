@@ -6,11 +6,11 @@
 # startup ----------------------------------
 
 # packages
-library(tidyverse)
-library(here)
-library(readxl)
-library(pdftools)
-library(scales)
+require(tidyverse)
+require(here)
+require(readxl)
+require(pdftools)
+require(scales)
 
 # source helper functions
 source(here("scripts", "0_helpers.R"))
@@ -111,7 +111,7 @@ output <- bind_rows(dfs_pdf_out) %>%
   arrange(local_gov, type, county, fy_year)
 
 # confirm all rows are present
-sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
+stopifnot(sum(map_int(dfs_pdf_out, nrow)) == nrow(output))
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))
@@ -120,32 +120,32 @@ saveRDS(output, file = "idot_mft.rds")
 
 
 
-# check against Timi's work ---------------------
-
-check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\mft_data_05_19.xlsx") %>% 
-  mutate(local_gov_type = recode_factor(local_gov_type, COUNTY = "County", TOWNSHIP = "Twp", MUNICIPALITY = "Muni"),
-         agency_name = str_to_title(agency_name))
-
-# this all looks pretty good
-full_join(output, check, by = c("local_gov" = "agency_name", "type" = "local_gov_type", "county", "fy_year")) %>% 
-  rowwise() %>% 
-  mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
-  View()
-
-
-# New table has around $500K more disbursement captured in each year than the old
-# analysis. Manual checks against PDF sums indicate new number is right.
-full_join(
-  output %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  check %>% 
-    group_by(fy_year) %>% 
-    summarize(fy_total = sum(fy_total)),
-  by = "fy_year",
-  suffix = c(".m", ".t")
-) %>% 
-  mutate(dif = fy_total.m - fy_total.t)
-
+# # check against Timi's work ---------------------
+# 
+# check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\mft_data_05_19.xlsx") %>% 
+#   mutate(local_gov_type = recode_factor(local_gov_type, COUNTY = "County", TOWNSHIP = "Twp", MUNICIPALITY = "Muni"),
+#          agency_name = str_to_title(agency_name))
+# 
+# # this all looks pretty good
+# full_join(output, check, by = c("local_gov" = "agency_name", "type" = "local_gov_type", "county", "fy_year")) %>% 
+#   rowwise() %>% 
+#   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
+#   View()
+# 
+# 
+# # New table has around $500K more disbursement captured in each year than the old
+# # analysis. Manual checks against PDF sums indicate new number is right.
+# full_join(
+#   output %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   check %>% 
+#     group_by(fy_year) %>% 
+#     summarize(fy_total = sum(fy_total)),
+#   by = "fy_year",
+#   suffix = c(".m", ".t")
+# ) %>% 
+#   mutate(dif = fy_total.m - fy_total.t)
+# 
 
 
