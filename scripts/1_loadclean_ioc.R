@@ -10,7 +10,7 @@ require(here)
 require(DBI)
 
 # location of input data
-setwd(here("data_raw", "ioc_findata"))
+setwd(here("data_raw", "ioc_afr"))
 
 # import category descriptions
 cats <- read.csv(here("resources", "ioc_cats.csv")) %>% 
@@ -57,12 +57,10 @@ process_ioc <- function(filename, cats_table){
   
   # process database
   df <- df %>% 
-    # filter for revenues only
+    # filter for total rows only, to avoid double counting
     filter(str_sub(CatCode, 4) =="t") %>% 
-    # convert NAs to 0s in revenue rows
-    mutate(., across(all_of(cols_to_sum), ~ifelse(is.na(.),0,.))) %>% 
     # sum revenues
-    mutate(., total = rowSums(across(all_of(cols_to_sum))))
+    mutate(total = rowSums(across(all_of(cols_to_sum)), na.rm = TRUE))
   
   message(paste0(filename, ": ", paste(cols_to_sum, collapse = " ")))
   
@@ -81,7 +79,7 @@ output <- bind_rows(dfs_out)
 # export as excel workbook and RDS
 setwd(here("data_processed"))
 write_csv(output, "ioc_revenues.csv")
-saveRDS(output, file = "idor_revenues.rds")
+saveRDS(output, file = "ioc_revenues.rds")
 
 
 # worth considering other fund categories??
