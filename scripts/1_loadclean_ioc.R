@@ -14,7 +14,7 @@ setwd(here("data_raw", "ioc_afr"))
 
 # import category descriptions
 cats <- read.csv(here("resources", "ioc_cats.csv")) %>% 
-  select(Category, CatName = Catname, CatName2 = Subcategory)
+  select(Category, Catname)
 
 # identify databases -----------------------
 
@@ -44,14 +44,13 @@ process_ioc <- function(filename, cats_table){
     inner_join(revenues, by = "Code") %>% 
     left_join(cats_table, by = "Category") %>% 
     as_tibble() %>% 
-    select(UnitName, Code, County, C1, Description, CatCode = Category, CatName, CatName2, FY, everything())
+    select(UnitName, Code, County, C1, Description, CatCode = Category, Catname, FY, everything())
   
   #assert all FY are the same and equal the year in the filename
   stopifnot(length(unique(df$FY)) == 1)
   stopifnot(as.numeric(df$FY[[1]]) == parse_number(filename))
   
-  ## CURRENTLY USING ALL REVENUES. LINDSAY SUGGESTS ONLY... 
-  ##   GN, SP, CP, and DS which are general funds, special funds, capital funds, and debt service funds.  
+  ## CURRENTLY USING ALL REVENUES. LINDSAY SUGGESTS ONLY GN, SP, CP, and DS.  
   # presumes that all columns from 10 onwards are revenue columns.
   cols_to_sum <- colnames(df)[10:length(colnames(df))] 
   
