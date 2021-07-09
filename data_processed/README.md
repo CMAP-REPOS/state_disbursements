@@ -6,5 +6,5 @@ replicate the raw data. Exceptions to this include:
 
 - PPRT data contains a field `local_gov_type` which is a staff interpretation 
 of digits 4-6 of the district number.
-- IOC data contains only revenues. These are records with 4 digit category 
-codes that end with the letter "t". In addition, this data contains columns `CatName` and `CatName2`, which are staff interpretations of the category code. See the ioc_cats.csv file in [resources](https://github.com/CMAP-REPOS/state_disbursements/tree/main/resources). 
+- IOC data (coming from local gov AFRs) contains only revenues table info. These are records with 4 digit category 
+codes in the 200 series. Category codes that end with anything besides for "t" have been dropped ("t" rows are totals; their subcategories are ignored here to avoid double counting). This data also contains columns `CatName` and `CatName2`, which are staff interpretations of the category code. See the ioc_cats.csv file in [resources](https://github.com/CMAP-REPOS/state_disbursements/tree/main/resources). 
