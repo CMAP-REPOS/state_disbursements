@@ -44,7 +44,7 @@ process_ioc <- function(filename, cats_table){
     inner_join(revenues, by = "Code") %>% 
     left_join(cats_table, by = "Category") %>% 
     as_tibble() %>% 
-    select(UnitName, Code, County, C1, Description, CatCode = Category, Catname, FY, everything())
+    select(UnitName, Code, County, C1, Description, Category, Catname, FY, everything())
   
   #assert all FY are the same and equal the year in the filename
   stopifnot(length(unique(df$FY)) == 1)
@@ -57,7 +57,7 @@ process_ioc <- function(filename, cats_table){
   # process database
   df <- df %>% 
     # filter for total rows only, to avoid double counting
-    filter(str_sub(CatCode, 4) =="t") %>% 
+    filter(str_sub(Category, 4) =="t") %>% 
     # sum revenues
     mutate(total = rowSums(across(all_of(cols_to_sum)), na.rm = TRUE))
   
