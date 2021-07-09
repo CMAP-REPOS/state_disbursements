@@ -1,5 +1,5 @@
 # Read in IOC revenues data 
-# Stern/Koyejo
+# Stern
 # July 2021
 
 # startup ----------------------------------
@@ -26,8 +26,6 @@ files <- list.files(pattern = ".mdb$")
 # Function to fetch and process revenue table data from IOC databases.
 # Presumes you have already `setwd()` and the `filename` is in the working dir.
 process_ioc <- function(filename, cats_table){
-  
-  message(paste0(filename, "..."))
   
   # Establish a connection
   # (help from https://stackoverflow.com/a/52096456; https://db.rstudio.com/r-packages/dbi/)
@@ -56,17 +54,17 @@ process_ioc <- function(filename, cats_table){
   ##   GN, SP, CP, and DS which are general funds, special funds, capital funds, and debt service funds.  
   # presumes that all columns from 10 onwards are revenue columns.
   cols_to_sum <- colnames(df)[10:length(colnames(df))] 
-  message(paste0("  Summing: ", paste(cols_to_sum, collapse = " ")))
   
-  # process datase
+  # process database
   df <- df %>% 
     # filter for revenues only
     filter(str_sub(CatCode, 4) =="t") %>% 
     # convert NAs to 0s in revenue rows
     mutate(., across(all_of(cols_to_sum), ~ifelse(is.na(.),0,.))) %>% 
-    # sum revenues (takes a minute)
-    rowwise() %>% 
-    mutate(., total_rev = sum(across(all_of(cols_to_sum))))
+    # sum revenues
+    mutate(., total = rowSums(across(all_of(cols_to_sum))))
+  
+  message(paste0(filename, ": ", paste(cols_to_sum, collapse = " ")))
   
   return(df)
 }
@@ -86,6 +84,8 @@ write_csv(output, "ioc_revenues.csv")
 saveRDS(output, file = "idor_revenues.rds")
 
 
-
+# worth considering other fund categories??
+filter(output, EP != 0 | TS != 0 | FD != 0 | DP != 0 | OT != 0) %>% 
+  View()
 
 
