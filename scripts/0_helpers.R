@@ -14,10 +14,10 @@ total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"
   total_pos <- str_which(df[[col1]], search)
   
   if (length(total_pos) > 2) {
-    warning(paste0(msglabel, ": Multiple total rows? Check! (NULL returned)"))
+    warning(paste0(msg_label, ": Multiple total rows? Check! (NULL returned)"))
     return(NULL)
   } else if (length(total_pos) == 0) {
-    message(paste0(msglabel, ": No total row found. Check!"))
+    message(paste0(msg_label, ": No total row found. Check!"))
   } else {
     # first part of message: where is total row located?
     msg1 <- paste("Total row (@", total_pos, "of", nrow(df), "rows")
@@ -26,10 +26,13 @@ total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"
     total_row <- df[total_pos,]
     df <- slice(df, 1:total_pos-1)
     
+    # remove any entirely blank rows
+    df <- drop_na(df)
+    
     # compare totals
     df_sum <- sum(df[[col2]])
     totalrow_sum <- total_row[[col2]]
-    matches <- all.equal(df_sum, totalrow_sum)
+    matches <- isTRUE(all.equal(df_sum, totalrow_sum))
     
     # second part of message: do totals match?
     msg2 <- if_else(matches,

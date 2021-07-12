@@ -26,7 +26,6 @@ files <- list.files(pattern = ".mdb$")
 # Function to fetch and process revenue table data from IOC databases.
 # Presumes you have already `setwd()` and the `filename` is in the working dir.
 process_ioc <- function(filename, cats_table){
-  browser()
   
   year <- parse_number(str_remove(filename, "\\(v2k\\)"))
   
