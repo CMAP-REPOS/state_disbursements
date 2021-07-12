@@ -26,6 +26,9 @@ files <- list.files(pattern = ".mdb$")
 # Function to fetch and process revenue table data from IOC databases.
 # Presumes you have already `setwd()` and the `filename` is in the working dir.
 process_ioc <- function(filename, cats_table){
+  browser()
+  
+  year <- parse_number(str_remove(filename, "\\(v2k\\)"))
   
   # Establish a connection
   # (help from https://stackoverflow.com/a/52096456; https://db.rstudio.com/r-packages/dbi/)
@@ -33,7 +36,7 @@ process_ioc <- function(filename, cats_table){
                                                                    getwd(), "//",filename,";"))
   
   # import necessary tables
-  revenues <- dbReadTable(con, "Revenues")
+  revenues <- dbReadTable(con, ifelse(year == 2001, "Revenues_2001", "Revenues"))
   unitdata <- dbReadTable(con, "UnitData")
   
   # Close connection
@@ -48,7 +51,7 @@ process_ioc <- function(filename, cats_table){
   
   #assert all FY are the same and equal the year in the filename
   stopifnot(length(unique(df$FY)) == 1)
-  stopifnot(as.numeric(df$FY[[1]]) == parse_number(filename))
+  stopifnot(as.numeric(df$FY[[1]]) == year)
   
   ## CURRENTLY USING ALL REVENUES. LINDSAY SUGGESTS ONLY GN, SP, CP, and DS.  
   # presumes that all columns from 10 onwards are revenue columns.
