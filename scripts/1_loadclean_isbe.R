@@ -53,6 +53,7 @@ dfs[["2002"]][[nrow(dfs[["2002"]]), "District Name"]] <- "Total"
 # Future year excel files should be checked to make sure the format has not evolved
 clean_excel <- function(df, fy){
   
+  ## FIGURE OUT HOW TO CLEAN THIS MESSY COLUMN RENAMING UP
   df <- df %>% 
     # drop percentage fields
     select(-starts_with("%"), -contains(" Pct of Total")) %>%
@@ -67,10 +68,21 @@ clean_excel <- function(df, fy){
     # normalize district name column name
     set_names(., str_replace(names(.), "^district$", "district name")) %>%
     # normalize total revenues column
-    set_names(., str_replace(
-      names(.), 
+    set_names(., str_replace(names(.), 
       "^total receipts/ revenues$|^total revenues$|^total receipts$|^total receipts revenue$|^total receipts/ revenue$", 
-      "total revenue"))
+      "total revenue")) %>% 
+    # normalize district number
+    set_names(., str_replace(names(.),
+      "^rcdt$|^id$|^rcdt no.$|^rcdt no$",
+      "district number"
+    )) %>% 
+    # normalize county name
+    set_names(., str_replace(names(.), "^cnty$|^county no$", "county")) %>% 
+    # normalize attendance
+    set_names(., str_replace(
+      names(.),
+      "9 month average daily attendance|9-month average daily attendance|9-month ada|9 mo average daily attendance|9 mo average daily attendence|9 mo ada|9 month ada|9 month average daily attendance|2017-2018 sch year 9 month ada|2018-2019 school year nine month ada",
+      "average daily attendance"))
 
   # check and remove total row
   df <- total_check_extract(df, "district name", "total revenue", fy, "Total|total")
@@ -90,6 +102,16 @@ clean_excel <- function(df, fy){
   stopifnot(length(unique(df$fy)) == 1)
   stopifnot(as.numeric(df$fy[[1]]) == fy)
   
+  # adjust column data types and capitalization
+  df <- mutate(df,
+               county = as.character(county) %>% 
+                 str_trunc(3, side = "left", ellipsis = "") %>% 
+                 str_pad(3, side = "left", pad = "0"),
+               fy = as.numeric(fy),
+               `district name` = tolower(`district name`),
+               `district number` = str_pad(`district number`, 13, side = "right", pad = "0")
+               )
+  
   return(df)
 }
 
@@ -99,15 +121,34 @@ dfs_out <- map2(dfs, files_tbl$year, clean_excel)
 
 # combine and export  ---------------------------
 
+## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT TYPES AND COL NAMES, NOT WORTH PROCESSING FURTHER UNTIL WE NEED THE DATA
+
+# at the moment, just using this to create a master list of school districts
+districts <- dfs_out %>% 
+  map(select, one_of("county", "district number", "fy", "district name", "average daily attendance")) %>% 
+  bind_rows() %>% 
+  arrange(`district number`, fy) %>% 
+  group_by(`district number`) %>% 
+  summarize(county = first(county),
+            fy_min = min(fy),
+            fy_max = max(fy),
+            name = last(`district name`),
+            names = paste(unique(`district name`), collapse = ","),
+            pop = last(`average daily attendance`))
+
+setwd(here("resources"))
+write_csv(districts, "schooldistricts.csv")
+
 ## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT TYPES AND COL NAMES, NOT WORTH PROGRESSING UNTIL WE NEED THE DATA
 # 
 # mutate(dfs_out[["2012"]], across(where(~any((class(.) %in% c("POSIXct", "POSIXt")))), as.numeric)) %>% 
 #   View()
 # 
 # 
-# mx <- max(map_int(ls, length))
-# ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
-# as_tibble(ls) %>% View()
+ls <- map(dfs_out, names)
+mx <- max(map_int(ls, length))
+ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
+as_tibble(ls) %>% View()
 # 
 # # collapse lists, combine into one
 # output <- bind_rows(dfs_out)
