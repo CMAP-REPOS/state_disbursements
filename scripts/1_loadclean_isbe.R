@@ -53,36 +53,39 @@ dfs[["2002"]][[nrow(dfs[["2002"]]), "District Name"]] <- "Total"
 # Future year excel files should be checked to make sure the format has not evolved
 clean_excel <- function(df, fy){
   
-  ## FIGURE OUT HOW TO CLEAN THIS MESSY COLUMN RENAMING UP
-  df <- df %>% 
-    # drop percentage fields
-    select(-starts_with("%"), -contains(" Pct of Total")) %>%
-    # make all years lowercase
-    set_names(., tolower) %>% 
-    # make prior year columns standard
-    set_names(., str_replace(names(.), as.character(fy - 2), "prior yr")) %>%
-    # remove instances of current year from names
-    set_names(., str_remove(names(.), paste0("^", fy, " "))) %>% 
-    # normalize district type column name
-    set_names(., str_replace(names(.), "^district type$", "type")) %>%
-    # normalize district name column name
-    set_names(., str_replace(names(.), "^district$", "district name")) %>%
-    # normalize total revenues column
-    set_names(., str_replace(names(.), 
-      "^total receipts/ revenues$|^total revenues$|^total receipts$|^total receipts revenue$|^total receipts/ revenue$", 
-      "total revenue")) %>% 
-    # normalize district number
-    set_names(., str_replace(names(.),
-      "^rcdt$|^id$|^rcdt no.$|^rcdt no$",
-      "district number"
-    )) %>% 
-    # normalize county name
-    set_names(., str_replace(names(.), "^cnty$|^county no$", "county")) %>% 
-    # normalize attendance
-    set_names(., str_replace(
-      names(.),
-      "9 month average daily attendance|9-month average daily attendance|9-month ada|9 mo average daily attendance|9 mo average daily attendence|9 mo ada|9 month ada|9 month average daily attendance|2017-2018 sch year 9 month ada|2018-2019 school year nine month ada",
-      "average daily attendance"))
+  # column names are a mess. Edits occur in two parts:
+  
+  # first, substring-level replacements 
+  names <- names(df) %>% 
+    # make everything lowercase
+    tolower() %>% 
+    # remove references to prior years
+    str_replace(as.character(fy - 2), "prior yr") %>% 
+    # remove instances of current year in name
+    str_remove(paste0("^", fy, " ")) %>% 
+    # remove various stray punctuation
+    str_remove("'") %>% 
+    # make plurals singular
+    str_replace("revenues", "revenue") %>% 
+    str_replace("expenditures", "expenditure") %>% 
+    str_replace("disbursements", "disbursement")
+  
+  # then, convert to df to perform string-level replacements
+  names <- as.data.frame(names) %>% 
+    set_names("nm") %>% 
+    mutate(nm = case_when(
+      str_detect(nm, "^total receipt|^total revenue") ~ "total revenue",        # total revenue
+      str_detect(nm, "^id$|^rcdt") ~ "district number",                         # dist number
+      str_detect(nm, "^type$") ~ "district type",                               # dist type
+      str_detect(nm, "^district$") ~ "district name",                           # dist name
+      str_detect(nm, "^cnty$|^county no$") ~ "county",                          # county code
+      str_detect(nm, "average daily attendance$|ada$") ~ "avg daily attend",    # attendance
+      str_detect(nm, "^total expenditure") ~ "total expenditure",               # total expenditure
+      TRUE ~ nm
+    ))
+  
+  # finally, overwrite names with adjusted ones
+  df <- set_names(df, names$nm)
 
   # check and remove total row
   df <- total_check_extract(df, "district name", "total revenue", fy, "Total|total")
@@ -90,7 +93,7 @@ clean_excel <- function(df, fy){
   
   # tables after 2002 don't have Fiscal years
   if(!("FY" %in% names(df))){
-    df <- mutate(df, fy = fy, .before = "type")
+    df <- mutate(df, fy = fy, .before = "district type")
   }
   
   # 1997 table seems to have wrong FY listed
@@ -109,8 +112,13 @@ clean_excel <- function(df, fy){
                  str_pad(3, side = "left", pad = "0"),
                fy = as.numeric(fy),
                `district name` = tolower(`district name`),
-               `district number` = str_pad(`district number`, 13, side = "right", pad = "0")
-               )
+               `district number` = str_pad(`district number`, 13, side = "right", pad = "0"),
+               `district type` = as.character(`district type`)
+               ) %>% 
+    # drop percentage fields and region field
+    select(-starts_with("%"), -contains(" Pct of Total"), -contains("region")) %>% 
+    # FOR NOW, DROP TAX RATE AND RANK FIELDS. SOME ARE IMPORTING AS DATES.
+    select(-ends_with("tax rate"), -ends_with("rank"))
   
   return(df)
 }
@@ -121,7 +129,10 @@ dfs_out <- map2(dfs, files_tbl$year, clean_excel)
 
 # combine and export  ---------------------------
 
-## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT TYPES AND COL NAMES, NOT WORTH PROCESSING FURTHER UNTIL WE NEED THE DATA
+## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT COL NAMES, NOT WORTH PROCESSING FURTHER UNTIL WE NEED THE DATA
+# collapse lists, combine into one
+output <- bind_rows(dfs_out)
+names(output)[str_which(names(output), "total")]
 
 # at the moment, just using this to create a master list of school districts
 districts <- dfs_out %>% 
@@ -139,19 +150,12 @@ districts <- dfs_out %>%
 setwd(here("resources"))
 write_csv(districts, "schooldistricts.csv")
 
-## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT TYPES AND COL NAMES, NOT WORTH PROGRESSING UNTIL WE NEED THE DATA
+
+# ls <- map(dfs_out, names)
+# mx <- max(map_int(ls, length))
+# ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
+# as_tibble(ls) %>% View()
 # 
-# mutate(dfs_out[["2012"]], across(where(~any((class(.) %in% c("POSIXct", "POSIXt")))), as.numeric)) %>% 
-#   View()
-# 
-# 
-ls <- map(dfs_out, names)
-mx <- max(map_int(ls, length))
-ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
-as_tibble(ls) %>% View()
-# 
-# # collapse lists, combine into one
-# output <- bind_rows(dfs_out)
 # 
 # # confirm all rows are present
 # stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
