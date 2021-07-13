@@ -42,14 +42,16 @@ dfs <- map2(files_tbl$fname, files_tbl$skip, ~(read_excel(path = .x, skip = .y))
   set_names(files_tbl$year)
 
 
+# clean excel files -----------------------
+
+# total row in 2002 table is just blank.
+dfs[["2002"]][[nrow(dfs[["2002"]]), "District Name"]] <- "Total"
+
 # Function to process excel files
 #
 # *** IMPORTANT NOTE ***
 # Future year excel files should be checked to make sure the format has not evolved
 clean_excel <- function(df, fy){
-  
-  message(paste0(fy, "..."))
-  #browser()
   
   df <- df %>% 
     # drop percentage fields
@@ -57,14 +59,21 @@ clean_excel <- function(df, fy){
     # make all years lowercase
     set_names(., tolower) %>% 
     # make prior year columns standard
-    set_names(., str_replace(names(.), as.character(fy - 2), "prior yr")) %>% 
+    set_names(., str_replace(names(.), as.character(fy - 2), "prior yr")) %>%
+    # remove instances of current year from names
+    set_names(., str_remove(names(.), paste0("^", fy, " "))) %>% 
     # normalize district type column name
-    set_names(., str_replace(names(.), "district type", "type")) %>% 
+    set_names(., str_replace(names(.), "^district type$", "type")) %>%
+    # normalize district name column name
+    set_names(., str_replace(names(.), "^district$", "district name")) %>%
     # normalize total revenues column
-    set_names(., str_replace(names(.), "^total receipts/ revenues$|^total revenues$|^total receipts$", "total revenue"))
+    set_names(., str_replace(
+      names(.), 
+      "^total receipts/ revenues$|^total revenues$|^total receipts$|^total receipts revenue$|^total receipts/ revenue$", 
+      "total revenue"))
 
   # check and remove total row
-  df <- total_check_extract(df, "district name", "total revenue", fy, "Total")
+  df <- total_check_extract(df, "district name", "total revenue", fy, "Total|total")
   # 2002 is blank Statewide Total|State Totals|Totals|
   
   # tables after 2002 don't have Fiscal years
@@ -84,23 +93,23 @@ clean_excel <- function(df, fy){
   return(df)
 }
 
-## CURRENTLY STUCK ON HANDLING OF TOTAL ROWS AS IT IS INCONSISTENT
-
 # map function across all available excel workbooks
 dfs_out <- map2(dfs, files_tbl$year, clean_excel)
 
 
 # combine and export  ---------------------------
 
-# collapse lists, combine into one
-output <- bind_rows(dfs_out)
+## HAVE STOPPED WORKING HERE. LENGTHS AND DATA TYPES OF VARIOUS DFS VARY. NEED TO INSPECT AND REPAIR
 
-# confirm all rows are present
-stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
-
-
-# export as excel workbook and RDS
-setwd(here("data_processed"))
-write_csv(output, "isbe_ilearn.csv")
-saveRDS(output, file = "isbe_ilearn.rds")
-
+# # collapse lists, combine into one
+# output <- bind_rows(dfs_out)
+# 
+# # confirm all rows are present
+# stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
+# 
+# 
+# # export as excel workbook and RDS
+# setwd(here("data_processed"))
+# write_csv(output, "isbe_ilearn.csv")
+# saveRDS(output, file = "isbe_ilearn.rds")
+# 

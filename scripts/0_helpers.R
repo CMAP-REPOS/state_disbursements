@@ -9,7 +9,7 @@
 #' @param search the label to search for in `col1`
 #' 
 total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"){
-
+  
   # identify total row in col1
   total_pos <- str_which(df[[col1]], search)
   
@@ -27,7 +27,8 @@ total_check_extract <- function(df, col1, col2, msg_label = "", search = "TOTAL"
     df <- slice(df, 1:total_pos-1)
     
     # remove any entirely blank rows
-    df <- drop_na(df)
+    df <- df %>% 
+      filter_all(any_vars(complete.cases(.)))  
     
     # compare totals
     df_sum <- sum(df[[col2]])
