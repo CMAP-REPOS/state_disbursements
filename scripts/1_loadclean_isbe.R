@@ -68,19 +68,29 @@ clean_excel <- function(df, fy){
     # make plurals singular
     str_replace("revenues", "revenue") %>% 
     str_replace("expenditures", "expenditure") %>% 
-    str_replace("disbursements", "disbursement")
+    str_replace("disbursements", "disbursement") %>% 
+    # deal with any whitespace
+    str_trim()
   
-  # then, convert to df to perform string-level replacements
+  # then, convert to df to perform field-level replacements
   names <- as.data.frame(names) %>% 
     set_names("nm") %>% 
     mutate(nm = case_when(
-      str_detect(nm, "^total receipt|^total revenue") ~ "total revenue",        # total revenue
+      str_detect(nm, "^cnty$|^county no$") ~ "county",                          # county code
       str_detect(nm, "^id$|^rcdt") ~ "district number",                         # dist number
+      str_detect(nm, "^fiscal year$") ~ "fy",                                   # fiscal year
       str_detect(nm, "^type$") ~ "district type",                               # dist type
       str_detect(nm, "^district$") ~ "district name",                           # dist name
-      str_detect(nm, "^cnty$|^county no$") ~ "county",                          # county code
-      str_detect(nm, "average daily attendance$|ada$") ~ "avg daily attend",    # attendance
-      str_detect(nm, "^total expenditure") ~ "total expenditure",               # total expenditure
+      str_detect(nm, "^total receipt|^total revenue") ~ "total revenue",        # total revenue
+      str_detect(nm, "^instruction per") ~ nm,                                  # don't adjust any "instruction per pupil" cols
+      str_detect(nm, "^instruction") ~ "instruction",                           # expend: instruction
+      str_detect(nm, "^general admin") ~ "general admin",                       # expend: general administration
+      str_detect(nm, "^support service") ~ "support services",                  # expend: support services
+      str_detect(nm, "^other exp") ~ "other expenses",                          # expend: other
+      str_detect(nm, "^total exp") ~ "total expenditure",                       # expend: total
+      str_detect(nm, "difference|^amount of revenue over") ~ "net (rev-exp)",   # revenues less expenditures
+      str_detect(nm, "k - 12|k-12|k12") ~ "net operating expense (k-12)",           # net k-12 operating expenses
+      str_detect(nm, "average daily attend[ae]nce$|ada$") ~ "avg daily attend",    # attendance
       TRUE ~ nm
     ))
   
@@ -116,8 +126,8 @@ clean_excel <- function(df, fy){
                `district type` = as.character(`district type`)
                ) %>% 
     # drop percentage fields and region field
-    select(-starts_with("%"), -contains(" Pct of Total"), -contains("region")) %>% 
-    # FOR NOW, DROP TAX RATE AND RANK FIELDS. SOME ARE IMPORTING AS DATES.
+    select(-starts_with("%"), -starts_with("state %"), -contains(" Pct of Total"), -contains("region")) %>% 
+    # FOR NOW, DROP TAX RATE AND RANK FIELDS. SOME ARE IMPORTING AS DATES. FIX IF/WHEN IT'S A PROBLEM
     select(-ends_with("tax rate"), -ends_with("rank"))
   
   return(df)
@@ -129,40 +139,22 @@ dfs_out <- map2(dfs, files_tbl$year, clean_excel)
 
 # combine and export  ---------------------------
 
-## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT COL NAMES, NOT WORTH PROCESSING FURTHER UNTIL WE NEED THE DATA
+
 # collapse lists, combine into one
 output <- bind_rows(dfs_out)
-names(output)[str_which(names(output), "total")]
 
-# at the moment, just using this to create a master list of school districts
-districts <- dfs_out %>% 
-  map(select, one_of("county", "district number", "fy", "district name", "average daily attendance")) %>% 
-  bind_rows() %>% 
-  arrange(`district number`, fy) %>% 
-  group_by(`district number`) %>% 
-  summarize(county = first(county),
-            fy_min = min(fy),
-            fy_max = max(fy),
-            name = last(`district name`),
-            names = paste(unique(`district name`), collapse = ","),
-            pop = last(`average daily attendance`))
+## SOME COL NAMES REMAIN TO BE MATCHED BUT CHOOSING TO IGNORE THIS UNTIL IT'S A PROBLEM.
+ls <- map(dfs_out, names)
+mx <- max(map_int(ls, length))
+ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
+as_tibble(ls) %>% View()
 
-setwd(here("resources"))
-write_csv(districts, "schooldistricts.csv")
+# confirm all rows are present
+stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
 
 
-# ls <- map(dfs_out, names)
-# mx <- max(map_int(ls, length))
-# ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
-# as_tibble(ls) %>% View()
-# 
-# 
-# # confirm all rows are present
-# stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
-# 
-# 
-# # export as excel workbook and RDS
-# setwd(here("data_processed"))
-# write_csv(output, "isbe_ilearn.csv")
-# saveRDS(output, file = "isbe_ilearn.rds")
-# 
+# export as excel workbook and RDS
+setwd(here("data_processed"))
+write_csv(output, "isbe_ilearn.csv")
+saveRDS(output, file = "isbe_ilearn.rds")
+

@@ -18,7 +18,19 @@ pop_county <- get_estimates(geography = "county",
                             year = 2019,
                             state = "IL")
 
-pop_schooldists <- read_csv(here("resources", "schooldistricts.csv"))
+pop_schooldists <- readRDS("isbe_ilearn.rds") %>% 
+  select(county, `district number`, fy, `district name`, `avg daily attend`) %>% 
+  arrange(`district number`, fy) %>% 
+  group_by(`district number`) %>% 
+  summarize(county = first(county),
+            fy_min = min(fy),
+            fy_max = max(fy),
+            name = last(`district name`),
+            names = paste(unique(`district name`), collapse = ","),
+            pop = last(`avg daily attend`))
+
+
+
 
 core <- bind_rows(
   #municipalities
