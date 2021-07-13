@@ -83,8 +83,8 @@ write_csv(output, "ioc_revenues.csv")
 saveRDS(output, file = "ioc_revenues.rds")
 
 
-# worth considering other fund categories??
-filter(output, EP != 0 | TS != 0 | FD != 0 | DP != 0 | OT != 0) %>% 
-  View()
+# # worth considering other fund categories??
+# filter(output, EP != 0 | TS != 0 | FD != 0 | DP != 0 | OT != 0) %>% 
+#   View()
 
 

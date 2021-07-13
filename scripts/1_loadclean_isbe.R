@@ -121,7 +121,7 @@ clean_excel <- function(df, fy){
                  str_trunc(3, side = "left", ellipsis = "") %>% 
                  str_pad(3, side = "left", pad = "0"),
                fy = as.numeric(fy),
-               `district name` = tolower(`district name`),
+               `district name` = str_to_title(`district name`),
                `district number` = str_pad(`district number`, 13, side = "right", pad = "0"),
                `district type` = as.character(`district type`)
                ) %>% 
