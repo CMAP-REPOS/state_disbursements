@@ -99,8 +99,16 @@ dfs_out <- map2(dfs, files_tbl$year, clean_excel)
 
 # combine and export  ---------------------------
 
-## HAVE STOPPED WORKING HERE. LENGTHS AND DATA TYPES OF VARIOUS DFS VARY. NEED TO INSPECT AND REPAIR
-
+## STUCK HERE. VARIOUS DATAFRAMES HAVE DIFFERENT TYPES AND COL NAMES, NOT WORTH PROGRESSING UNTIL WE NEED THE DATA
+# 
+# mutate(dfs_out[["2012"]], across(where(~any((class(.) %in% c("POSIXct", "POSIXt")))), as.numeric)) %>% 
+#   View()
+# 
+# 
+# mx <- max(map_int(ls, length))
+# ls <- lapply(ls, function(lst) c(lst, rep(NA, mx - length(lst))))
+# as_tibble(ls) %>% View()
+# 
 # # collapse lists, combine into one
 # output <- bind_rows(dfs_out)
 # 
