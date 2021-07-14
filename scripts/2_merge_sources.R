@@ -56,10 +56,18 @@ core <- bind_rows(
 
 
 # Income and use data
-idor_income_use <- readRDS("idor_income_use.rds") %>% 
-  mutate(local_gov_type = ifelse(str_detect(local_gov, "COUNTY GOVERNMENT$"),
-                                 "county",
-                                 "muni"),
-         local_gov = str_remove(local_gov, "COUNTY GOVERNMENT$")
-  )
+idor_income_use <- readRDS("idor_income_use.rds") 
 
+# investigate joins using a wide version of the table, to explore match accuracy
+idor_income_use %>% 
+  select(-vendor_num) %>% 
+  pivot_wider(id_cols = c("local_gov", "local_gov_type"),
+              names_from = c("tax_type", "fy_year"),
+              values_from = "fy_total",
+              names_sort = TRUE) %>% 
+  filter_all(any_vars(is.na(.))) %>% View("LGs missing records")
+
+
+# next step do join on wide dataset to look for match accuracy. Continue to adjust, then do final join on long data
+
+# will also need to add clean names methods to other import tools.

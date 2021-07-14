@@ -55,6 +55,21 @@ clean_excel <- function(df, fy){
     mutate_at(vars(tax_type), as.factor) %>%   # convert tax_type into factor
     mutate(fy_year = fy)                       # add column with fy year
   
+  # Some munis are missing unique identifiers in certain or all excel files.
+  # - Wilmington: there are two Wilmingtons
+  # - Windsor: New Windsor is recorded as Windsor (New Windsor) in these files
+  # - Elmwood: Elmwood Park is recorded as just Elmwood in certain files.
+  # These have been matched based on vendor numbers to entries in the PDFs, 
+  # which do have descriptive identifiers. They are corrected here:
+  df <- df %>% 
+    mutate(local_gov = case_when(
+      local_gov == "WINDSOR" & vendor_num == "380009420" ~ "WINDSOR (NEW WINDSOR)",
+      local_gov == "WINDSOR" & vendor_num == "380009430" ~ "WINDSOR (SHELBY COUNTY)",
+      local_gov == "WILMINGTON" & vendor_num == "380009390" ~ "WILMINGTON (GREENE COUNTY)",
+      local_gov == "WILMINGTON" & vendor_num == "380009392" ~ "WILMINGTON (WILL COUNTY)",
+      local_gov == "ELMWOOD" & vendor_num == "380002770" ~ "ELMWOOD PARK",
+      TRUE ~ local_gov
+    ))
 
   return(df)
 }
@@ -142,7 +157,7 @@ dfs_pdf_out <- map2(dfs_pdf, years_num, clean_pdf)
 rm(years_num)
 
 
-# combine and export  ---------------------------
+# combine, clean names, export  ---------------------------
 
 # collapse lists, and combine into one
 output <- bind_rows(
@@ -152,9 +167,19 @@ output <- bind_rows(
   arrange(local_gov, tax_type, vendor_num, fy_year)
 
 
+output <- mutate(output,
+  # establish local government type: all counties are identified as such.
+  local_gov_type = ifelse(str_detect(local_gov, "COUNTY GOVERNMENT$"),
+                          "county",
+                          "muni"),
+  # remove the explicit text in local gov name to county
+  local_gov = str_remove(local_gov, " COUNTY GOVERNMENT$"))
+
+# clean up names
+output$local_gov <- clean_names(output$local_gov)
+
 # confirm all rows are present
 stopifnot(sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output))
-
 
 # export as excel workbook and RDS
 setwd(here("data_processed"))

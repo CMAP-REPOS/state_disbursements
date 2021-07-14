@@ -1,5 +1,3 @@
-
-
 #' function to remove a total row, checking the sum first
 #' 
 #' @param df a data frame with a total row
@@ -83,3 +81,36 @@ rm_header_footer <- function(raw_list, header_search, footer_search){
   return(processed)
 }
 
+
+clean_names <- function(names_vector, corrections_table = NULL){
+  
+  # get corrections table
+  if (is.null(corrections_table)){
+    corrections_table <- read.csv(here("resources", "name_corrections.csv")) %>% 
+      mutate(ExistingRecord = tolower(ExistingRecord))
+  }
+  
+  df <- as.data.frame(names_vector) %>% 
+    set_names("old") %>% 
+    # apply general rules
+    mutate(
+      new1 = str_to_title(old),
+      new2 = str_replace(new1, "^St |^Saint ", "St. ")) %>% 
+    # apply custom renaming via corrections table
+    mutate(join = str_to_lower(new2)) %>% 
+    left_join(corrections_table, by = c("join" = "ExistingRecord")) %>% 
+    mutate(new3 = ifelse(is.na(CensusName), new2, CensusName)) %>% 
+    # identify changes (besides for capitalization)
+    mutate(changed = ifelse(new3 == new1, FALSE, TRUE))
+  
+  changes <- filter(df, changed) %>%
+    select(BEFORE = new1, AFTER = new3) %>% 
+    unique()
+  
+  row.names(changes) <- seq_len(nrow(changes))
+  
+  message("Set all names to title case, and changed the following names:")
+  print.data.frame(changes)
+  
+  return(df$new3)
+}
