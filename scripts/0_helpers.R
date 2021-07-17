@@ -81,7 +81,8 @@ rm_header_footer <- function(raw_list, header_search, footer_search){
   return(processed)
 }
 
-
+#' Clean  names from various raw datasets to make them internally and externally consistent
+#' 
 clean_names <- function(names_vector, corrections_table = NULL){
   
   # get corrections table
