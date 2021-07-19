@@ -157,7 +157,7 @@ dfs_pdf_out <- map2(dfs_pdf, years_num, clean_pdf)
 rm(years_num)
 
 
-# combine, clean names, export  ---------------------------
+# combine and perform name cleaning  ---------------------------
 
 # collapse lists, and combine into one
 output <- bind_rows(
@@ -178,17 +178,32 @@ output <- mutate(output,
 # clean up names
 output$local_gov <- clean_names(output$local_gov)
 
+
+
+# Perform some checks  ---------------------------
+
 # confirm all rows are present
-stopifnot(sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output))
+sum(map_int(dfs_excel_out, nrow)) + sum(map_int(dfs_pdf_out, nrow)) == nrow(output)
 
-# export as excel workbook and RDS
-setwd(here("data_processed"))
-write_csv(output, "idor_income_use.csv")
-saveRDS(output, file = "idor_income_use.rds")
+# Investigate joins using a wide version of the table, to explore name accuracy across years.
+# The only rows in this table should be munis that don't collect a certain type of tax or
+# were not incorporated at some point during the years of data analyzed here. There should be no 
+# duplicated munis in this list, if all name corrections have been handled correctly.
+output %>% 
+  select(-vendor_num) %>% 
+  pivot_wider(id_cols = c("local_gov", "local_gov_type"),
+              names_from = c("tax_type", "fy_year"),
+              values_from = "fy_total",
+              names_sort = TRUE) %>% 
+  filter_all(any_vars(is.na(.))) %>% 
+  View("LGs missing records")
 
+# Check against Timi's work
+#
+# Note that this analysis was built before the `clean_names()` function was built. 
+# The join will likely only work if that function is not applied to the `local_gov`
+# column.
 
-# # check against Timi's work ---------------------
-# #
 # # New script seems to handle situations where one local gov has multiple vendor nums
 # #   better. See, for example, FY2012 Wilmington and Windsor
 # check <-readRDS("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\income_use_fy06_19_clean.RDS")
@@ -210,6 +225,15 @@ saveRDS(output, file = "idor_income_use.rds")
 #   suffix = c(".m", ".t")
 # ) %>% 
 #   mutate(dif = fy_total.m - fy_total.t)
+
+
+# Export finished files  ---------------------------
+
+setwd(here("data_processed"))
+write_csv(output, "idor_income_use.csv")
+saveRDS(output, file = "idor_income_use.rds")
+
+
 
 
 
