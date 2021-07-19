@@ -67,61 +67,88 @@ years_num <- str_extract(files, "[[:digit:]]+") %>%
 dfs_out <- map2(dfs, years_num, clean_excel)
 
 
-# combine and export  ---------------------------
+# combine and clean  ---------------------------
 
 # collapse lists, combine into one, and calculate local gov types
 # gov types from Timi's work, which included these references:
 # - list of IL local governments https://illinoiscomptroller.gov/financial-data/local-government-division/types-of-local-governments-in-illinois/
 # - intro to IL special districts http://www.ilga.gov/commission/lru/specialdistricts.pdf
 output <- bind_rows(dfs_out) %>% 
-  relocate(fy_year, .before = fy_total) %>% 
-  arrange(local_gov, district_num, vendor_num, fy_year) %>% 
   mutate(district_local_gov_id = str_sub(district_num, 4, 6)) %>%  # extract 4th - 6th digit from district num
-  mutate(local_gov_type = case_when(district_local_gov_id == "101" ~ "County",
-                                    district_local_gov_id == "240" ~ "Municipality",
-                                    district_local_gov_id == "302" ~ "Township",
-                                    district_local_gov_id == "508" ~ "Park District",
-                                    district_local_gov_id == "509" ~ if_else(district_num %in% c("0165090025", "0455090010", "0455090042", 
-                                                                                                 "0575090017", "1015090123"),
-                                                                             "Water Reclaim District",
-                                                                             "Sanitary District"),
-                                    district_local_gov_id == "510" ~ "Fire Protection District",
-                                    district_local_gov_id == "511" ~ "Public Health District",
-                                    district_local_gov_id == "512" ~ "Hospital District",
-                                    district_local_gov_id == "513" ~ "TB Sanatorium District",
-                                    district_local_gov_id == "514" ~ "Mosquito Abatement District",
-                                    district_local_gov_id == "515" ~ "Airport Authority District",
-                                    district_local_gov_id == "516" ~ "Public Library District",
-                                    district_local_gov_id == "518" ~ "Water Authority District",
-                                    district_local_gov_id == "519" ~ "Cemetery District",
-                                    district_local_gov_id == "520" ~ "Forest Preserve District",
-                                    district_local_gov_id == "521" ~ "Street Lighting District",
-                                    district_local_gov_id == "523" ~ "Mass Transit District", 
-                                    district_local_gov_id == "530" ~ if_else(district_num %in% c("0225300025", "0825300022"), # subclassify WESTMONT 1 SURFACE WATER DIST and MASCOUTAH SURFACE WTR DISTRICT as Surface Water
-                                                                             "Surface Water District",
-                                                                             "River Conservancy District"), # classifying the FULTON FLOOD DIST as River Conservancy for this purpose
-                                    district_local_gov_id == "531" ~ "Soil and Water Conservation District", # SWCD
-                                    district_local_gov_id == "532" ~ "Conservation District", # Combines a small number of related districts that have same code
-                                    district_local_gov_id == "606" ~ "Community College District",
-                                    district_local_gov_id %in% c("701", "702", "703", "704", "705") ~ "Elementary School District",
-                                    district_local_gov_id %in% c("713", "716", "717", "718", "719") ~ "High School District", # 713 is Cosolidated High School, 716
-                                    # some context on what the school codes mean, see "Type Code" https://www.isbe.net/Documents/key_codes.pdf
-                                    district_local_gov_id %in% c("722", "724", "725", "726", "727") ~ "Unit School District",
-                                    district_local_gov_id == "902" ~ "Road & Bridge District",
-                                    TRUE ~ "Other" ))
+  mutate(
+    local_gov_specific_type = case_when(
+      district_local_gov_id == "101" ~ "County",
+      district_local_gov_id == "240" ~ "Municipality",
+      district_local_gov_id == "302" ~ "Township",
+      district_local_gov_id == "508" ~ "Park District",
+      district_local_gov_id == "509" ~ if_else(district_num %in% c("0165090025", "0455090010", "0455090042", 
+                                                                   "0575090017", "1015090123"),
+                                               "Water Reclaim District",
+                                               "Sanitary District"),
+      district_local_gov_id == "510" ~ "Fire Protection District",
+      district_local_gov_id == "511" ~ "Public Health District",
+      district_local_gov_id == "512" ~ "Hospital District",
+      district_local_gov_id == "513" ~ "TB Sanatorium District",
+      district_local_gov_id == "514" ~ "Mosquito Abatement District",
+      district_local_gov_id == "515" ~ "Airport Authority District",
+      district_local_gov_id == "516" ~ "Public Library District",
+      district_local_gov_id == "518" ~ "Water Authority District",
+      district_local_gov_id == "519" ~ "Cemetery District",
+      district_local_gov_id == "520" ~ "Forest Preserve District",
+      district_local_gov_id == "521" ~ "Street Lighting District",
+      district_local_gov_id == "523" ~ "Mass Transit District", 
+      district_local_gov_id == "530" ~ if_else(district_num %in% c("0225300025", "0825300022"), # subclassify WESTMONT 1 SURFACE WATER DIST and MASCOUTAH SURFACE WTR DISTRICT as Surface Water
+                                               "Surface Water District",
+                                               "River Conservancy District"), # classifying the FULTON FLOOD DIST as River Conservancy for this purpose
+      district_local_gov_id == "531" ~ "Soil and Water Conservation District", # SWCD
+      district_local_gov_id == "532" ~ "Conservation District", # Combines a small number of related districts that have same code
+      district_local_gov_id == "606" ~ "Community College District",
+      district_local_gov_id %in% c("701", "702", "703", "704", "705") ~ "Elementary School District",
+      district_local_gov_id %in% c("713", "716", "717", "718", "719") ~ "High School District", # 713 is Cosolidated High School, 716
+      # some context on what the school codes mean, see "Type Code" https://www.isbe.net/Documents/key_codes.pdf
+      district_local_gov_id %in% c("722", "724", "725", "726", "727") ~ "Unit School District",
+      district_local_gov_id == "902" ~ "Road & Bridge District",
+      TRUE ~ "Other" ),
+    local_gov_type = recode(
+      str_sub(district_local_gov_id, 1, 1),
+      "1" = "county",
+      "2" = "muni",
+      "3" = "township",
+      "7" = "school district", 
+      .default = "other"
+    )
+  ) %>% 
+  select(local_gov, local_gov_type, local_gov_specific_type, district_num, vendor_num, fy_year, fy_total) %>% 
+  arrange(local_gov, local_gov_type, local_gov_specific_type, district_num, vendor_num, fy_year)
+
+
+# name cleaning # still developing what gets included here.
+output$local_gov <- clean_names(output$local_gov)
+
+# Perform some checks  ---------------------------
+
 
 # confirm all rows are present
-stopifnot(sum(map_int(dfs_out, nrow)) == nrow(output))
+sum(map_int(dfs_out, nrow)) == nrow(output)
+
+# Investigate joins using a wide version of the table, to explore name accuracy across years.
+# The only rows in this table should be munis that don't collect a certain type of tax or
+# were not incorporated at some point during the years of data analyzed here. There should be no 
+# duplicated munis in this list, if all name corrections have been handled correctly.
+output %>% 
+  select(-vendor_num) %>% 
+  pivot_wider(id_cols = c("local_gov", "local_gov_type","local_gov_specific_type", "district_num"),
+              names_from = c("fy_year"),
+              values_from = "fy_total",
+              names_sort = TRUE) %>% 
+  filter_all(any_vars(is.na(.))) %>% 
+  View("LGs missing records")
 
 
-# export as excel workbook and RDS
-setwd(here("data_processed"))
-write_csv(output, "idor_pprt.csv")
-saveRDS(output, file = "idor_pprt.rds")
-
-
-
-# # check against Timi's work ---------------------
+# # check against Timi's work
+# Note that this analysis was built before the `clean_names()` function was built. 
+# The join will likely only work if that function is not applied to the `local_gov`
+# column.
 # 
 # check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\pprt_fy07_19_clean.xlsx")
 # 
@@ -143,4 +170,16 @@ saveRDS(output, file = "idor_pprt.rds")
 #   rowwise() %>% 
 #   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
 #   View()
+
+
+
+# Export finished files  ---------------------------
+
+setwd(here("data_processed"))
+write_csv(output, "idor_pprt.csv")
+saveRDS(output, file = "idor_pprt.rds")
+
+
+
+
 

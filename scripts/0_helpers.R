@@ -96,22 +96,28 @@ clean_names <- function(names_vector, corrections_table = NULL){
     # apply general rules
     mutate(
       new1 = str_to_title(old),
-      new2 = str_replace(new1, "^St |^Saint ", "St. ")) %>% 
+      new2 = str_remove(
+        new1, paste0(
+          " ", c("Village", "Town", "City", "Township", "Twp", "County"), 
+          "$", collapse = "|")),
+      new3 = str_replace(new2, "^St |^Saint |(?<=^East )St ", "St. "),
+      new3 = str_replace(new3, "^Ofallon|^O'fallon|^O Fallon", "O'Fallon")
+      ) %>% 
     # apply custom renaming via corrections table
-    mutate(join = str_to_lower(new2)) %>% 
+    mutate(join = str_to_lower(new3)) %>% 
     left_join(corrections_table, by = c("join" = "ExistingRecord")) %>% 
-    mutate(new3 = ifelse(is.na(CensusName), new2, CensusName)) %>% 
-    # identify changes (besides for capitalization)
-    mutate(changed = ifelse(new3 == new1, FALSE, TRUE))
+    mutate(new4 = ifelse(is.na(CensusName), new3, CensusName)) %>% 
+    # identify changes (besides for capitalization and suffix removal)
+    mutate(changed = ifelse(new4 == new2, FALSE, TRUE))
   
   changes <- filter(df, changed) %>%
-    select(BEFORE = new1, AFTER = new3) %>% 
+    select(BEFORE = new2, AFTER = new4) %>% 
     unique()
   
   row.names(changes) <- seq_len(nrow(changes))
   
-  message("Set all names to title case, and changed the following names:")
+  message("Set all names to title case, removed primary LG type suffixes, and changed the following names:")
   print.data.frame(changes)
   
-  return(df$new3)
+  return(df$new4)
 }

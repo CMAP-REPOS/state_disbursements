@@ -16,10 +16,10 @@ create_namejoin <- function(names_vector){
 
 
 # Create core list of local governments --------------------------------
-
+in_lgs <- list()
 
 # Municipalities
-pop_place <- get_estimates(geography = "place",
+in_lgs$place <- get_estimates(geography = "place",
                            variables = "POP",
                            state = 17) %>% 
   # clean up names
@@ -41,7 +41,7 @@ pop_place <- get_estimates(geography = "place",
 
 
 # Counties
-pop_county <- get_estimates(geography = "county",
+in_lgs$county <- get_estimates(geography = "county",
                             variables = "POP",
                             state = 17) %>% 
   # clean up names
@@ -51,7 +51,7 @@ pop_county <- get_estimates(geography = "county",
 
 
 # School districts
-pop_schooldists <- readRDS("isbe_ilearn.rds") %>% 
+in_lgs$schooldists <- readRDS("isbe_ilearn.rds") %>% 
   select(county, `district number`, fy, `district name`, `avg daily attend`) %>% 
   arrange(`district number`, fy) %>% 
   group_by(`district number`) %>% 
@@ -65,13 +65,14 @@ pop_schooldists <- readRDS("isbe_ilearn.rds") %>%
   select(local_gov = name, local_gov_type, id = `district number`, current_pop)
 
 # combine all
-core <- bind_rows(pop_place, pop_county) %>% 
-  bind_rows(pop_schooldists) %>% 
+lgs <- bind_rows(in_lgs) %>% 
   mutate(join_name = create_namejoin(local_gov)) %>% 
   arrange(local_gov)
 
 # create an empty list for finished records
 dfs_out <- list()
+
+
 
 # Merge in IDOR Income & Use tax disbursements ---------------------------------
 
@@ -89,19 +90,22 @@ in_idor_income_use %>%
   select(local_gov, local_gov_type, INC_2019) %>%
   mutate(in_idor_tbl = "yes",
          join_name = create_namejoin(local_gov)) %>% 
-  full_join(core, by = c("join_name", "local_gov_type")) %>%
+  full_join(lgs, by = c("join_name", "local_gov_type")) %>%
   filter((is.na(in_idor_tbl) & local_gov_type != "school district")|is.na(id))
 
 # construct final df for this dataset.
 dfs_out$idor_income_use <- in_idor_income_use %>% 
   mutate(join_name = create_namejoin(local_gov)) %>% 
   select(-local_gov) %>% 
-  left_join(core, by = c("join_name", "local_gov_type")) %>% 
+  left_join(lgs, by = c("join_name", "local_gov_type")) %>% 
   select(local_gov, local_gov_type, muni_type, id, current_pop, disbursement = tax_type, fy_year, vendor_num, fy_total) %>% 
   arrange(local_gov, local_gov_type, muni_type, disbursement, fy_year)
 
 
+# Merge in IDOR PPRT disbursements ---------------------------------
 
+# sales data
+in_idor_pprt <- readRDS("idor_pprt.rds") 
 
 
 
