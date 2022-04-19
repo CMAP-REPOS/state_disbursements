@@ -96,18 +96,18 @@ clean_names <- function(names_vector, corrections_table = NULL){
     # apply general rules
     mutate(
       new1 = str_to_title(old),
-      new2 = str_remove(
-        new1, paste0(
-          " ", c("Village", "Town", "City", "Township", "Twp", "County"), 
-          "$", collapse = "|")),
+      new2 = str_remove(new1, " (Township|Twp|Town|County)$"), # Lots of muni names actually end with "City" or "Village"
+      new2 = str_remove(new2, "^(Township|Twp|Town|Village|City) Of "),
       new3 = str_replace(new2, "^St |^Saint |(?<=^East )St ", "St. "),
-      new3 = str_replace(new3, "^Ofallon|^O'fallon|^O Fallon", "O'Fallon")
+      new3 = str_replace(new3, "^Ofallon|^O'fallon|^O Fallon", "O'Fallon"),
+      new3 = str_replace(new3, "^Gibson$", "Gibson City"),
+      new3 = str_replace(new3, "^Rocky Run$|^Wilcox$|^Rocky Run Wilcox$", "Rocky Run-Wilcox"),  # These 2 twps merged mid-2017
       ) %>% 
     # apply custom renaming via corrections table
     mutate(join = str_to_lower(new3)) %>% 
     left_join(corrections_table, by = c("join" = "ExistingRecord")) %>% 
     mutate(new4 = ifelse(is.na(CensusName), new3, CensusName)) %>% 
-    # identify changes (besides for capitalization and suffix removal)
+    # identify changes (besides for capitalization and prefix/suffix removal)
     mutate(changed = ifelse(new4 == new2, FALSE, TRUE))
   
   changes <- filter(df, changed) %>%
