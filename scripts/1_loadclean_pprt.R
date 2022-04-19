@@ -112,7 +112,7 @@ output <- bind_rows(dfs_out) %>%
     local_gov_type = recode(
       str_sub(district_local_gov_id, 1, 1),
       "1" = "county",
-      "2" = "muni",
+      "2" = "municipality",
       "3" = "township",
       "7" = "school district", 
       .default = "other"
@@ -137,7 +137,7 @@ sum(map_int(dfs_out, nrow)) == nrow(output)
 # duplicated munis in this list, if all name corrections have been handled correctly.
 output %>% 
   select(-vendor_num) %>% 
-  pivot_wider(id_cols = c("local_gov", "local_gov_type","local_gov_specific_type", "district_num"),
+  pivot_wider(id_cols = c("local_gov", "local_gov_type", "local_gov_specific_type", "district_num"),
               names_from = c("fy_year"),
               values_from = "fy_total",
               names_sort = TRUE) %>% 
@@ -178,8 +178,3 @@ output %>%
 setwd(here("data_processed"))
 write_csv(output, "idor_pprt.csv")
 saveRDS(output, file = "idor_pprt.rds")
-
-
-
-
-

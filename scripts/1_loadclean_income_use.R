@@ -171,7 +171,7 @@ output <- mutate(output,
   # establish local government type: all counties are identified as such.
   local_gov_type = ifelse(str_detect(local_gov, "COUNTY GOVERNMENT$"),
                           "county",
-                          "muni"),
+                          "municipality"),
   # remove the explicit text in local gov name to county
   local_gov = str_remove(local_gov, " COUNTY GOVERNMENT$"))
 
@@ -197,6 +197,7 @@ output %>%
               names_sort = TRUE) %>% 
   filter_all(any_vars(is.na(.))) %>% 
   View("LGs missing records")
+
 
 # Check against Timi's work
 #
@@ -232,8 +233,3 @@ output %>%
 setwd(here("data_processed"))
 write_csv(output, "idor_income_use.csv")
 saveRDS(output, file = "idor_income_use.rds")
-
-
-
-
-

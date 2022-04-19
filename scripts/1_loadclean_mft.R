@@ -47,39 +47,39 @@ clean_pdf <- function(list, fy){
   if (fy >= 2020){
     table <- table %>%  
       separate(value,  # separate value column into multiple columns
-               into = c("local_gov", "type", NA, NA, "fy_total"), # DROP MFT AND TRF COLUMNS, KEEP TOTAL ONLY
+               into = c("local_gov", "local_gov_type", NA, NA, "fy_total"), # DROP MFT AND TRF COLUMNS, KEEP TOTAL ONLY
                sep = " \\s{2,}", # separate anywhere where at least 2 spaces exist
-               fill = "left")    # leave empty cells on the left (for empty "agency" and "type") 
+               fill = "left")    # leave empty cells on the left (for empty "agency" and "local_gov_type") 
   } else {
     table <- table %>%  
       separate(value,  # separate value column into multiple columns
-               into = c("local_gov", "type", "fy_total"),
+               into = c("local_gov", "local_gov_type", "fy_total"),
                sep = " \\s{2,}", # separate anywhere where at least 2 spaces exist
-               fill = "left")    # leave empty cells on the left (for empty "agency" and "type")
+               fill = "left")    # leave empty cells on the left (for empty "agency" and "local_gov_type")
   }
   
   table <- table %>% 
     mutate(fy_total = parse_number(fy_total)) %>% 
     # drop totals rows
-    filter(!is.na(type)) %>% 
+    filter(!is.na(local_gov_type)) %>% 
     # give type meaning
-    mutate(type = recode_factor(type,
-                                `1` = "County",
-                                `2` = "Twp",
-                                `3` = "Muni")) %>% 
+    mutate(local_gov_type = recode_factor(local_gov_type,
+                                          `1` = "county",
+                                          `2` = "township",
+                                          `3` = "municipality")) %>% 
     # create county column
-    mutate(county = case_when(type == "County" ~ local_gov),
-           .after = type) %>% 
+    mutate(county = case_when(local_gov_type == "county" ~ local_gov),
+           .after = local_gov_type) %>% 
     fill(county) %>% 
-    arrange(type, local_gov, county) %>% 
+    arrange(local_gov_type, local_gov, county) %>% 
     mutate(fy_year = fy) 
   
   # print totals for manual verification
   msg <- table %>% 
-    group_by(type) %>% 
+    group_by(local_gov_type) %>% 
     summarise(fy_total = sum(fy_total)) %>% 
     mutate(
-      type = as.character(type),
+      local_gov_type = as.character(local_gov_type),
       fy_total = dollar_format()(fy_total)) %>% 
     paste(collapse = ", ")
   
@@ -108,26 +108,44 @@ rm(years_num, last_page_to_keep)
 # collapse lists, combine into one
 output <- bind_rows(dfs_pdf_out) %>% 
   relocate(fy_year, .before = fy_total) %>% 
-  arrange(local_gov, type, county, fy_year)
+  arrange(local_gov, local_gov_type, county, fy_year)
+
+# clean up names
+output$local_gov <- clean_names(output$local_gov)
+output$county <- clean_names(output$county)
+
+# Sum fy_total by unique local_gov, local_gov_type, county, fy_year to
+# resolve issue where Rocky Run and Wilcox Twps were separate until mid-2017
+output <- output %>%
+  group_by(local_gov, local_gov_type, county, fy_year) %>%
+  summarize(fy_total = sum(fy_total), .groups = "drop")
 
 # confirm all rows are present
 stopifnot(sum(map_int(dfs_pdf_out, nrow)) == nrow(output))
 
-# export as excel workbook and RDS
-setwd(here("data_processed"))
-write_csv(output, "idot_mft.csv")
-saveRDS(output, file = "idot_mft.rds")
+# Investigate joins using a wide version of the table, to explore name accuracy across years.
+# The only rows in this table should be munis that don't collect a certain type of tax or
+# were not incorporated at some point during the years of data analyzed here. There should be no 
+# duplicated munis in this list, if all name corrections have been handled correctly.
+output %>%
+  pivot_wider(id_cols = c("local_gov", "local_gov_type", "county"),
+              names_from = "fy_year",
+              values_from = "fy_total",
+              names_prefix = "fy",
+              names_sort = TRUE) %>%
+  filter_all(any_vars(is.na(.))) %>%
+  View("LGs missing records")
 
 
 
 # # check against Timi's work ---------------------
 # 
 # check <- read_excel("S:\\Projects_FY20\\Policy Development\\Tax policy analysis\\State disbursements\\Data Analysis\\data\\processed\\mft_data_05_19.xlsx") %>% 
-#   mutate(local_gov_type = recode_factor(local_gov_type, COUNTY = "County", TOWNSHIP = "Twp", MUNICIPALITY = "Muni"),
+#   mutate(local_gov_type = recode_factor(local_gov_type, COUNTY = "county", TOWNSHIP = "township", MUNICIPALITY = "municipality"),
 #          agency_name = str_to_title(agency_name))
 # 
 # # this all looks pretty good
-# full_join(output, check, by = c("local_gov" = "agency_name", "type" = "local_gov_type", "county", "fy_year")) %>% 
+# full_join(output, check, by = c("local_gov" = "agency_name", "local_gov_type" = "local_gov_type", "county", "fy_year")) %>% 
 #   rowwise() %>% 
 #   mutate(equal = ifelse(all.equal(fy_total.x, fy_total.y), "YES", "-")) %>% 
 #   View()
@@ -148,4 +166,7 @@ saveRDS(output, file = "idot_mft.rds")
 #   mutate(dif = fy_total.m - fy_total.t)
 # 
 
-
+# export as excel workbook and RDS
+setwd(here("data_processed"))
+write_csv(output, "idot_mft.csv")
+saveRDS(output, file = "idot_mft.rds")
