@@ -82,6 +82,7 @@ clean_excel <- function(df, fy){
       str_detect(nm, "^type$") ~ "district type",                               # dist type
       str_detect(nm, "^district$") ~ "district name",                           # dist name
       str_detect(nm, "^total receipt|^total revenue") ~ "total revenue",        # total revenue
+      str_detect(nm, "^(instruction|general administration|support services|other expenses) %$") ~ nm, # don't adjust the 4 % fields (new in FY20)
       str_detect(nm, "^instruction per") ~ nm,                                  # don't adjust any "instruction per pupil" cols
       str_detect(nm, "^instruction") ~ "instruction",                           # expend: instruction
       str_detect(nm, "^general admin") ~ "general admin",                       # expend: general administration
@@ -126,9 +127,9 @@ clean_excel <- function(df, fy){
                `district type` = as.character(`district type`)
                ) %>% 
     # drop percentage fields and region field
-    select(-starts_with("%"), -starts_with("state %"), -contains(" Pct of Total"), -contains("region")) %>% 
+    select(-contains("%"), -contains(" Pct of Total"), -contains("region")) %>% 
     # FOR NOW, DROP TAX RATE AND RANK FIELDS. SOME ARE IMPORTING AS DATES. FIX IF/WHEN IT'S A PROBLEM
-    select(-ends_with("tax rate"), -ends_with("rank"))
+    select(-ends_with("tax rate"), -ends_with("rank"), -ends_with("ranking"))
   
   return(df)
 }
